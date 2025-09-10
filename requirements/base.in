@@ -6,6 +6,6 @@ djangorestframework         # Django REST framework for API development
 
 
 openedx-atlas
+casbin                      # Casbin library
 casbin-django-orm-adapter   # Casbin Django ORM adapter
-django_authorization        # Django Authorization library
 redis-watcher               # Redis Watcher for Casbin
