@@ -17,7 +17,7 @@ class ExtendedAdapter(Adapter, FilteredAdapter):
 
     def load_filtered_policy(self, model, filter) -> None:  # pylint: disable=redefined-builtin
         """loads all policy rules from the storage."""
-        queryset = CasbinRule.objects.using(self.db_alias).all()
+        queryset = CasbinRule.objects.using(self.db_alias)
         filtered_queryset = self.filter_query(queryset, filter)
         for line in filtered_queryset:
             persist.load_policy_line(str(line), model)
