@@ -13,7 +13,10 @@ class ExtendedAdapter(Adapter, FilteredAdapter):
     Extended adapter for the casbin model.
     """
 
-    _filtered = False
+    _filtered = True
+
+    def is_filtered(self):
+        return self._filtered
 
     def load_filtered_policy(self, model, filter) -> None:  # pylint: disable=redefined-builtin
         """loads all policy rules from the storage."""
