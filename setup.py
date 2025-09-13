@@ -159,4 +159,9 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
     ],
+    entry_points={
+        "lms.djangoapp": [
+            "openedx_authz = openedx_authz.apps:OpenedxAuthzConfig",
+        ],
+    },
 )
