@@ -1,0 +1,18 @@
+p, role:platform_admin, act:manage, *, allow
+p, role:org_admin, act:manage, lib:*, allow
+p, role:org_editor, act:edit, lib:*, allow
+p, role:library_author, act:edit, lib:*, allow
+p, role:library_reviewer, act:read, lib:*, allow
+p, role:org_editor, act:edit, lib:restricted-content, deny
+
+g, user:admin, role:platform_admin, *
+g, user:alice, role:org_admin, org:OpenedX
+g, user:bob, role:org_editor, org:MIT
+g, user:mary, role:library_author, lib:math-basics
+g, user:john, role:library_author, lib:science-101
+g, user:sarah, role:library_reviewer, lib:math-basics
+
+g2, act:manage, act:edit
+g2, act:manage, act:delete
+g2, act:edit, act:read
+g2, act:edit, act:write
