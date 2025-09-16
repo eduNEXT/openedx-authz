@@ -111,6 +111,8 @@ pluggy==1.6.0
     #   -r requirements/test.txt
     #   pytest
     #   pytest-cov
+pycasbin==2.2.0
+    # via -r requirements/test.txt
 pycparser==2.22
     # via cffi
 pydata-sphinx-theme==0.15.4
@@ -164,6 +166,10 @@ roman-numerals-py==3.1.0
     # via sphinx
 secretstorage==3.3.3
     # via keyring
+simpleeval==1.0.3
+    # via
+    #   -r requirements/test.txt
+    #   pycasbin
 snowballstemmer==3.0.1
     # via sphinx
 soupsieve==2.8
