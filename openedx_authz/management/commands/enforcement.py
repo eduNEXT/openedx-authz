@@ -32,13 +32,13 @@ class Command(BaseCommand):
         parser.add_argument(
             "--policy-file",
             type=str,
-            default="policy.csv",
+            default="authz.policy",
             help="Path to the policy CSV file (default: policy.csv)",
         )
         parser.add_argument(
             "--request-file",
             type=str,
-            default="request.txt",
+            default="request.sample",
             help="Path to the request test file (default: request.txt)",
         )
         parser.add_argument(
