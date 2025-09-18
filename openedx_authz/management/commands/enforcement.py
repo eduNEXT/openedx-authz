@@ -1,8 +1,22 @@
 """
-Django management command for testing Casbin enforcement policies.
+Django management command for interactive Casbin enforcement testing.
 
-This command creates a Casbin enforcer from model.conf and auth.policy files,
-then tests enforcement for each request in request.sample.
+This command creates a Casbin enforcer using the model.conf configuration and a
+user-specified policy file, then provides an interactive mode for testing
+authorization enforcement requests.
+
+The command supports:
+- Loading Casbin model from the built-in model.conf file
+- Using custom policy files (specified via --policy-file-path argument)
+- Interactive testing with format: subject action object scope
+- Real-time enforcement results with visual feedback (✓ ALLOWED / ✗ DENIED)
+- Display of loaded policies, role assignments, and action grouping rules
+
+Example usage:
+    python manage.py lms enforcement --policy-file-path /path/to/authz.policy
+
+Example test input:
+    user:alice act:read lib:test-lib org:OpenedX
 """
 
 import os
@@ -10,72 +24,66 @@ import os
 import casbin
 from django.core.management.base import BaseCommand, CommandError
 
+from openedx_authz import ROOT_DIRECTORY
+
 
 class Command(BaseCommand):
     """
-    Test Casbin enforcement policies using model.conf, auth.policy, and request.sample
+    Django management command for interactive Casbin enforcement testing.
+
+    This command loads a Casbin model configuration and user-specified policy file
+    to create an enforcer instance, then provides an interactive shell for testing
+    authorization requests in real-time with immediate feedback.
     """
 
     help = (
-        "Test Casbin enforcement policies using model.conf, auth.policy, and request.sample. "
-        "Supports interactive mode for custom testing."
+        "Interactive mode for testing Casbin enforcement policies using model.conf and a custom policy file. "
+        "Provides real-time authorization testing with format: subject action object scope. "
+        "Use --policy-file-path to specify the policy file location."
     )
 
     def add_arguments(self, parser) -> None:
-        """Add the arguments to the parser."""
+        """Add command-line arguments to the argument parser.
+
+        Args:
+            parser: The Django argument parser instance to configure.
+        """
         parser.add_argument(
-            "--model-file",
+            "--policy-file-path",
             type=str,
-            default="model.conf",
-            help="Path to the Casbin model configuration file (default: model.conf)",
-        )
-        parser.add_argument(
-            "--policy-file",
-            type=str,
-            default="authz.policy",
-            help="Path to the policy CSV file (default: auth.policy)",
-        )
-        parser.add_argument(
-            "--request-file",
-            type=str,
-            default="request.sample",
-            help="Path to the request test file (default: request.sample)",
-        )
-        parser.add_argument(
-            "--interactive",
-            action="store_true",
-            help="Run in interactive mode for enforcement requests",
+            required=True,
+            help="Path to the Casbin policy file (supports CSV format with policies, roles, and action grouping)",
         )
 
     def handle(self, *args, **options):
-        """Handle the command."""
-        model_file = self.get_file_path(options["model_file"])
-        policy_file = self.get_file_path(options["policy_file"])
-        interactive_mode = options.get("interactive", False)
+        """Execute the enforcement testing command.
 
-        if not os.path.isfile(model_file):
-            raise CommandError(f"Model file not found: {model_file}")
-        if not os.path.isfile(policy_file):
-            raise CommandError(f"Policy file not found: {policy_file}")
+        Loads the Casbin model and policy files, creates an enforcer instance,
+        displays configuration summary, and starts the interactive testing mode.
 
-        if not interactive_mode:
-            request_file = self.get_file_path(options["request_file"])
-            if not os.path.isfile(request_file):
-                raise CommandError(f"Request file not found: {request_file}")
+        Args:
+            *args: Positional command arguments (unused).
+            **options: Command options including 'policy_file_path'.
 
-        self.stdout.write(self.style.SUCCESS("=== Casbin Enforcement Testing ==="))
-        self.stdout.write(f"Model file: {model_file}")
-        self.stdout.write(f"Policy file: {policy_file}")
-        if interactive_mode:
-            self.stdout.write("Mode: Interactive")
-        else:
-            request_file = self.get_file_path(options["request_file"])
-            self.stdout.write(f"Request file: {request_file}")
+        Raises:
+            CommandError: If model or policy files are not found or enforcer creation fails.
+        """
+        model_file_path = self.get_file_path("model.conf")
+        policy_file_path = options["policy_file_path"]
+
+        if not os.path.isfile(model_file_path):
+            raise CommandError(f"Model file not found: {model_file_path}")
+        if not os.path.isfile(policy_file_path):
+            raise CommandError(f"Policy file not found: {policy_file_path}")
+
+        self.stdout.write(self.style.SUCCESS("Casbin Interactive Enforcement"))
+        self.stdout.write(f"Model file path: {model_file_path}")
+        self.stdout.write(f"Policy file path: {policy_file_path}")
         self.stdout.write("")
 
         try:
-            enforcer = casbin.Enforcer(model_file, policy_file)
-            self.stdout.write(self.style.SUCCESS("✓ Casbin enforcer created successfully"))
+            enforcer = casbin.Enforcer(model_file_path, policy_file_path)
+            self.stdout.write(self.style.SUCCESS("Casbin enforcer created successfully"))
 
             policies = enforcer.get_policy()
             roles = enforcer.get_grouping_policy()
@@ -86,89 +94,39 @@ class Command(BaseCommand):
             self.stdout.write(f"✓ Loaded {len(action_grouping)} action grouping rules")
             self.stdout.write("")
 
-            if interactive_mode:
-                self._run_interactive_mode(enforcer)
-            else:
-                request_file = self.get_file_path(options["request_file"])
-                self._process_requests(enforcer, request_file)
+            self._run_interactive_mode(enforcer)
 
         except Exception as e:
             raise CommandError(f"Error creating Casbin enforcer: {str(e)}") from e
 
     def get_file_path(self, file_name: str) -> str:
-        """Get the file path for the given file name."""
-        return os.path.join(os.path.dirname(__file__), file_name)
+        """Construct the full file path for a configuration file.
 
-    def _process_requests(self, enforcer: casbin.Enforcer, request_file: str) -> None:
-        """Process each request in the request file and test enforcement."""
-        self.stdout.write(self.style.SUCCESS("=== Processing Enforcement Requests ==="))
+        Args:
+            file_name (str): The name of the configuration file (e.g., 'model.conf').
 
-        total_requests = 0
-        passed_requests = 0
-        failed_requests = 0
-
-        with open(request_file, "r") as file:
-            for line_num, line in enumerate(file, 1):
-                line = line.strip()
-
-                # Skip empty lines and comments
-                if not line or line.startswith("#"):
-                    continue
-
-                total_requests += 1
-
-                try:
-                    # Parse request line: subject, action, object, scope, expected_result
-                    parts = [part.strip() for part in line.split(",")]
-                    if len(parts) != 5:
-                        self.stdout.write(
-                            self.style.ERROR(f"Line {line_num}: Invalid format - expected 5 parts, got {len(parts)}")
-                        )
-                        failed_requests += 1
-                        continue
-
-                    subject, action, obj, scope, expected_str = parts
-                    expected_result = expected_str.lower() == "true"
-
-                    actual_result = enforcer.enforce(subject, action, obj, scope)
-
-                    if actual_result == expected_result:
-                        status = self.style.SUCCESS("✓ PASS")
-                        passed_requests += 1
-                    else:
-                        status = self.style.ERROR("✗ FAIL")
-                        failed_requests += 1
-
-                    self.stdout.write(
-                        f"{status} Line {line_num:2d}: {subject}, {action}, {obj}, {scope} "
-                        f"-> Expected: {expected_result}, Got: {actual_result}"
-                    )
-
-                except (ValueError, IndexError) as e:
-                    self.stdout.write(self.style.ERROR(f"Line {line_num}: Error processing request - {str(e)}"))
-                    failed_requests += 1
-
-        self.stdout.write("")
-        self.stdout.write(self.style.SUCCESS("=== Enforcement Test Summary ==="))
-        self.stdout.write(f"Total requests: {total_requests}")
-        self.stdout.write(self.style.SUCCESS(f"Passed: {passed_requests}"))
-        if failed_requests > 0:
-            self.stdout.write(self.style.ERROR(f"Failed: {failed_requests}"))
-        else:
-            self.stdout.write(f"Failed: {failed_requests}")
-
-        success_rate = (passed_requests / total_requests * 100) if total_requests > 0 else 0
-        self.stdout.write(f"Success rate: {success_rate:.1f}%")
-
-        if failed_requests == 0:
-            self.stdout.write(self.style.SUCCESS("All tests passed!"))
-        else:
-            self.stdout.write(self.style.WARNING(f"⚠️ {failed_requests} test(s) failed"))
+        Returns:
+            str: The absolute path to the configuration file in the engine/config directory.
+        """
+        return os.path.join(ROOT_DIRECTORY, "engine", "config", file_name)
 
     def _run_interactive_mode(self, enforcer: casbin.Enforcer) -> None:
-        """Run interactive mode for testing custom enforcement requests."""
-        self.stdout.write(self.style.SUCCESS("=== Interactive Mode ==="))
+        """Start the interactive enforcement testing shell.
+
+        Provides a continuous loop where users can input enforcement requests
+        in the format 'subject action object scope' and receive immediate
+        authorization results with visual feedback.
+
+        Args:
+            enforcer (casbin.Enforcer): The configured Casbin enforcer instance for testing.
+
+        Note:
+            Exit the interactive mode with Ctrl+C or Ctrl+D.
+        """
+        self.stdout.write(self.style.SUCCESS("Interactive Mode"))
         self.stdout.write("Test custom enforcement requests interactively.")
+        self.stdout.write("Enter 'quit', 'exit', or 'q' to exit the interactive mode.")
+        self.stdout.write("")
         self.stdout.write("Format: subject action object scope")
         self.stdout.write("Example: user:alice act:read lib:test-lib org:OpenedX")
         self.stdout.write("")
@@ -176,20 +134,40 @@ class Command(BaseCommand):
         while True:
             try:
                 user_input = input("Enter enforcement test: ").strip()
+
                 if not user_input:
                     continue
+
+                if user_input.lower() in ["quit", "exit", "q"]:
+                    break
+
                 self._test_interactive_request(enforcer, user_input)
             except (KeyboardInterrupt, EOFError):
+                self.stdout.write(self.style.ERROR("Exiting interactive mode..."))
                 break
 
     def _test_interactive_request(self, enforcer: casbin.Enforcer, user_input: str) -> None:
-        """Test a single enforcement request from interactive input."""
+        """Process and test a single enforcement request from user input.
+
+        Parses the input string, validates the format, executes the enforcement
+        check, and displays the result with appropriate styling.
+
+        Args:
+            enforcer (casbin.Enforcer): The Casbin enforcer instance to use for testing.
+            user_input (str): The user's input string in format 'subject action object scope'.
+
+        Expected format:
+            subject: The requesting entity (e.g., 'user:alice')
+            action: The requested action (e.g., 'act:read')
+            object: The target resource (e.g., 'lib:test-lib')
+            scope: The authorization context (e.g., 'org:OpenedX')
+        """
         try:
             parts = [part.strip() for part in user_input.split()]
             if len(parts) != 4:
                 self.stdout.write(self.style.ERROR(f"✗ Invalid format. Expected 4 parts, got {len(parts)}"))
-                self.stdout.write("   Format: subject action object scope")
-                self.stdout.write("   Example: user:alice act:read lib:test-lib org:OpenedX")
+                self.stdout.write("Format: subject action object scope")
+                self.stdout.write("Example: user:alice act:read lib:test-lib org:OpenedX")
                 return
 
             subject, action, obj, scope = parts
