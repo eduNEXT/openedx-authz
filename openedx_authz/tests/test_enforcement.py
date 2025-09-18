@@ -16,13 +16,6 @@ from ddt import data, ddt
 class AuthRequest(TypedDict):
     """
     Represents an authorization request with all necessary parameters.
-
-    Attributes:
-        subject (str): The subject (user/service) requesting access
-        action (str): The action being requested
-        object (str): The object/resource being accessed
-        scope (str): The authorization scope
-        expected_result (bool): Whether access should be granted
     """
 
     subject: str
