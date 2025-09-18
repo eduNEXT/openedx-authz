@@ -43,7 +43,7 @@ g, user:sarah, role:library_reviewer, lib:math-basics
 g, user:maria, role:report_viewer, org:OpenedX
 
 
-# ===== ACTION INHERITANCE (g2) =====
+# ===== ACTION GROUPING (g2) =====
 
 # manage implies edit, delete, read, write
 g2, act:manage, act:edit
