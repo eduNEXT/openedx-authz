@@ -14,6 +14,8 @@ code-annotations==2.3.0
     # via -r requirements/test.in
 coverage[toml]==7.10.5
     # via pytest-cov
+ddt==1.7.2
+    # via -r requirements/test.in
     # via
     #   -c https:/raw.githubusercontent.com/edx/edx-lint/master/edx_lint/files/common_constraints.txt
     #   -r requirements/base.txt

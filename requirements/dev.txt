@@ -50,6 +50,8 @@ coverage[toml]==7.10.5
     # via
     #   -r requirements/quality.txt
     #   pytest-cov
+ddt==1.7.2
+    # via -r requirements/quality.txt
 diff-cover==9.6.0
     # via -r requirements/dev.in
 dill==0.4.0
