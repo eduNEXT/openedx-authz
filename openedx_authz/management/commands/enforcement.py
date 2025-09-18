@@ -120,17 +120,17 @@ class Command(BaseCommand):
                 try:
                     # Parse request line: subject, action, object, scope, expected_result
                     parts = [part.strip() for part in line.split(",")]
-                    if len(parts) != 5:
+                    if len(parts) != 4:
                         self.stdout.write(
-                            self.style.ERROR(f"Line {line_num}: Invalid format - expected 5 parts, got {len(parts)}")
+                            self.style.ERROR(f"Line {line_num}: Invalid format - expected 4 parts, got {len(parts)}")
                         )
                         failed_requests += 1
                         continue
 
-                    subject, action, obj, scope, expected_str = parts
+                    subject, action, scope, expected_str = parts
                     expected_result = expected_str.lower() == "true"
 
-                    actual_result = enforcer.enforce(subject, action, obj, scope)
+                    actual_result = enforcer.enforce(subject, action, scope)
 
                     if actual_result == expected_result:
                         status = self.style.SUCCESS("✓ PASS")
@@ -140,7 +140,7 @@ class Command(BaseCommand):
                         failed_requests += 1
 
                     self.stdout.write(
-                        f"{status} Line {line_num:2d}: {subject}, {action}, {obj}, {scope} "
+                        f"{status} Line {line_num:2d}: {subject}, {action}, {scope} "
                         f"-> Expected: {expected_result}, Got: {actual_result}"
                     )
 
@@ -169,8 +169,8 @@ class Command(BaseCommand):
         """Run interactive mode for testing custom enforcement requests."""
         self.stdout.write(self.style.SUCCESS("=== Interactive Mode ==="))
         self.stdout.write("Test custom enforcement requests interactively.")
-        self.stdout.write("Format: subject action object scope")
-        self.stdout.write("Example: user:alice act:read lib:test-lib org:OpenedX")
+        self.stdout.write("Format: subject action scope")
+        self.stdout.write("Example: user:alice act:read org:OpenedX")
         self.stdout.write("Special commands: help, policies, users, quit")
         self.stdout.write("")
 
@@ -189,17 +189,17 @@ class Command(BaseCommand):
             parts = [part.strip() for part in user_input.split()]
             if len(parts) != 4:
                 self.stdout.write(self.style.ERROR(f"✗ Invalid format. Expected 4 parts, got {len(parts)}"))
-                self.stdout.write("   Format: subject action object scope")
-                self.stdout.write("   Example: user:alice act:read lib:test-lib org:OpenedX")
+                self.stdout.write("   Format: subject action scope")
+                self.stdout.write("   Example: user:alice act:read org:OpenedX")
                 return
 
-            subject, action, obj, scope = parts
-            result = enforcer.enforce(subject, action, obj, scope)
+            subject, action, scope = parts
+            result = enforcer.enforce(subject, action, scope)
 
             if result:
-                self.stdout.write(self.style.SUCCESS(f"✓ ALLOWED: {subject} {action} {obj} {scope}"))
+                self.stdout.write(self.style.SUCCESS(f"✓ ALLOWED: {subject} {action} {scope}"))
             else:
-                self.stdout.write(self.style.ERROR(f"✗ DENIED: {subject} {action} {obj} {scope}"))
+                self.stdout.write(self.style.ERROR(f"✗ DENIED: {subject} {action} {scope}"))
 
         except (ValueError, IndexError, TypeError) as e:
             self.stdout.write(self.style.ERROR(f"✗ Error processing request: {str(e)}"))

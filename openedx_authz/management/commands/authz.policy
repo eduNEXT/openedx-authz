@@ -1,38 +1,56 @@
-# ===== POLICIES =====
-# Platform-level permissions
+############################################
+# Example Policies for Scope-based Model
+############################################
+
+# ===== Policies (p) =====
+# Format: p, subject(role), action, scope, effect
+
+# Global platform admin: can manage everything
 p, role:platform_admin, act:manage, *, allow
-# Organization-level permissions
-p, role:org_admin, act:manage, lib:*, allow
-p, role:org_editor, act:edit, lib:*, allow
-# Library-specific permissions
-p, role:library_author, act:edit, lib:*, allow
-p, role:library_reviewer, act:read, lib:*, allow
-p, role:editor, act:edit, lib:*, allow
-# Report permissions
-p, role:report_viewer, act:read, report:*, allow
-# Access restrictions and exceptions
-p, role:org_editor, act:edit, lib:restricted-content, deny
-p, role:org_admin, act:manage, lib:another-restricted-content, deny
 
-# ===== ROLE ASSIGNMENTS =====
+# Org admin: can manage all resources within org OpenedX
+p, role:org_admin, act:manage, org:OpenedX, allow
 
-# Platform administrators
-g, user:admin, role:platform_admin, *
-# Organization administrators
-g, user:alice, role:org_admin, org:OpenedX
-# Organization editors
-g, user:bob, role:org_editor, org:MIT
-g, user:paul, role:editor, org:OpenedX
-# Library authors
-g, user:mary, role:library_author, lib:math-basics
-g, user:john, role:library_author, lib:science-101
-# Library reviewers
-g, user:sarah, role:library_reviewer, lib:math-basics
-# Report viewers
-g, user:maria, role:report_viewer, org:OpenedX
+# Org editor: can edit resources within org OpenedX
+p, role:org_editor, act:edit, org:OpenedX, allow
 
-# ===== ACTION INHERITANCE (g2) =====
+# Course instructor: can manage resources within a specific course
+p, role:course_instructor, act:manage, course:course-v1:OpenedX+DemoX+CS101, allow
+
+# Reviewer: can only read within a specific library
+p, role:library_reviewer, act:read, lib:math-basics, allow
+
+# Note: Scope-based authorization naturally prevents cross-scope access
+
+
+# ===== Role Assignments (g) =====
+# Format: g, user, role, scope
+
+# Alice is platform admin (global scope)
+g, user:alice, role:platform_admin, *
+
+# Bob is org admin for OpenedX (org scope)
+g, user:bob, role:org_admin, org:OpenedX
+
+# Eve is org editor for OpenedX (org scope)
+g, user:eve, role:org_editor, org:OpenedX
+
+# Carol is instructor for course CS101 (course scope)
+g, user:carol, role:course_instructor, course:course-v1:OpenedX+DemoX+CS101
+
+# David is reviewer for library math-basics (library scope)
+g, user:david, role:library_reviewer, lib:math-basics
+
+
+# ===== Action Grouping (g2) =====
+# Format: g2, high-level-action, implied-action
+
+# manage implies all other actions
 g2, act:manage, act:edit
+g2, act:manage, act:read
+g2, act:manage, act:write
 g2, act:manage, act:delete
+
+# edit implies read and write
 g2, act:edit, act:read
 g2, act:edit, act:write

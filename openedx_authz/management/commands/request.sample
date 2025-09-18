@@ -1,102 +1,120 @@
 # ===== PLATFORM ADMINISTRATORS =====
-# Platform admin (user:admin) - should have access to everything
-user:admin, act:manage, lib:math-basics, *, True
-user:admin, act:delete, lib:science-101, *, True
-user:admin, act:read, lib:any-library, *, True
-user:admin, act:write, lib:any-library, *, True
-user:admin, act:delete, lib:any-library, *, True
+
+# Alice - Platform admin (global scope) - should have access to everything
+user:alice, act:manage, *, True
+user:alice, act:manage, lib:math-basics, True
+user:alice, act:manage, org:OpenedX, True
+user:alice, act:manage, course:course-v1:OpenedX+DemoX+CS101, True
+user:alice, act:edit, lib:any-library, True
+user:alice, act:read, lib:any-library, True
+user:alice, act:write, lib:any-library, True
+user:alice, act:delete, lib:any-library, True
+
 
 # ===== ORGANIZATION ADMINISTRATORS =====
-# Alice - OpenedX org admin (should have access within OpenedX scope)
-user:alice, act:manage, lib:openedx-library, org:OpenedX, True
-user:alice, act:delete, lib:openedx-content, org:OpenedX, True
-user:alice, act:write, lib:math-basics, org:OpenedX, True
-user:alice, act:read, lib:openedx-test, org:OpenedX, True
-user:alice, act:write, lib:openedx-test, org:OpenedX, True
-user:alice, act:delete, lib:openedx-test, org:OpenedX, True
-user:alice, act:manage, lib:math-basics, org:OpenedX, True
-user:alice, act:manage, lib:science-101, org:OpenedX, True
-user:alice, act:edit, lib:science-101, org:OpenedX, True
 
-# Alice - Cross-org access (should be denied)
-user:alice, act:manage, lib:mit-library, org:MIT, False
-user:alice, act:read, lib:mit-content, org:MIT, False
-user:alice, act:manage, lib:openedx-lib, *, False
+# Bob - OpenedX org admin (should have access within OpenedX scope)
+user:bob, act:manage, org:OpenedX, True
+user:bob, act:edit, org:OpenedX, True
+user:bob, act:read, org:OpenedX, True
+user:bob, act:write, org:OpenedX, True
+user:bob, act:delete, org:OpenedX, True
 
-# Alice - Restricted content access (should be denied)
-user:alice, act:manage, lib:another-restricted-content, org:OpenedX, False
-user:alice, act:edit, lib:another-restricted-content, org:OpenedX, False
-user:alice, act:read, lib:another-restricted-content, org:OpenedX, False
-user:alice, act:write, lib:another-restricted-content, org:OpenedX, False
-user:alice, act:delete, lib:another-restricted-content, org:OpenedX, False
+# Bob - Cross-org access (should be denied - no role in other orgs)
+user:bob, act:manage, org:MIT, False
+user:bob, act:read, org:MIT, False
+user:bob, act:edit, org:MIT, False
+
+# Bob - Global access (should be denied - not platform admin)
+user:bob, act:manage, *, False
+
+# Bob - Exception case: cannot delete specific course (deny rule)
+user:bob, act:delete, course:course-v1:OpenedX+DemoX+CS101, False
+
 
 # ===== ORGANIZATION EDITORS =====
-# Bob - MIT org editor (should have edit access within MIT scope)
-user:bob, act:edit, lib:mit-course, org:MIT, True
-user:bob, act:read, lib:mit-content, org:MIT, True
-user:bob, act:write, lib:mit-data, org:MIT, True
-user:bob, act:read, lib:mit-test, org:MIT, True
-user:bob, act:write, lib:mit-test, org:MIT, True
 
-# Bob - Higher privilege access (should be denied)
-user:bob, act:delete, lib:mit-course, org:MIT, False
-user:bob, act:manage, lib:mit-course, org:MIT, False
-user:bob, act:delete, lib:mit-test, org:MIT, False
+# Eve - OpenedX org editor (should have edit access within OpenedX scope)
+user:eve, act:edit, org:OpenedX, True
+user:eve, act:read, org:OpenedX, True
+user:eve, act:write, org:OpenedX, True
 
-# Bob - Restricted content access (should be denied)
-user:bob, act:edit, lib:restricted-content, org:MIT, False
-user:bob, act:read, lib:restricted-content, org:MIT, False
-user:bob, act:write, lib:restricted-content, org:MIT, False
+# Eve - Should NOT have manage/delete permissions (only editors, not admin)
+user:eve, act:manage, org:OpenedX, False
+user:eve, act:delete, org:OpenedX, False
 
-# Bob - Scope isolation tests (should be denied)
-user:bob, act:edit, lib:mit-course, lib:mit-course, False
+# Eve - Cross-org access (should be denied - no role in other orgs)
+user:eve, act:edit, org:MIT, False
+user:eve, act:read, org:MIT, False
 
-# Paul - OpenedX editor with wildcard access
-user:paul, act:edit, lib:openedx-lib, org:OpenedX, True
-user:paul, act:edit, lib:mit-lib, org:MIT, False
+# Eve - Global access (should be denied - not platform admin)
+user:eve, act:edit, *, False
+user:eve, act:manage, *, False
 
-# ===== LIBRARY AUTHORS =====
-# Mary - math-basics library author
-user:mary, act:edit, lib:math-basics, lib:math-basics, True
-user:mary, act:read, lib:math-basics, lib:math-basics, True
-user:mary, act:write, lib:math-basics, lib:math-basics, True
+# Eve - Course access (should be denied - no role in course scope)
+user:eve, act:edit, course:course-v1:OpenedX+DemoX+CS101, False
+user:eve, act:manage, course:course-v1:OpenedX+DemoX+CS101, False
 
-# Mary - Higher privilege access (should be denied)
-user:mary, act:delete, lib:math-basics, lib:math-basics, False
-user:mary, act:manage, lib:math-basics, lib:math-basics, False
 
-# Mary - Cross-library access (should be denied)
-user:mary, act:edit, lib:science-101, lib:science-101, False
-user:mary, act:read, lib:science-101, lib:science-101, False
+# ===== COURSE INSTRUCTORS =====
 
-# Mary - Scope isolation (should be denied)
-user:mary, act:edit, lib:math-basics, org:OpenedX, False
+# Carol - Course instructor for CS101 (should have access within course scope)
+user:carol, act:manage, course:course-v1:OpenedX+DemoX+CS101, True
+user:carol, act:edit, course:course-v1:OpenedX+DemoX+CS101, True
+user:carol, act:read, course:course-v1:OpenedX+DemoX+CS101, True
+user:carol, act:write, course:course-v1:OpenedX+DemoX+CS101, True
+user:carol, act:delete, course:course-v1:OpenedX+DemoX+CS101, True
 
-# John - science-101 library author
-user:john, act:edit, lib:science-101, lib:science-101, True
-user:john, act:read, lib:science-101, lib:science-101, True
+# Carol - Cross-course access (should be denied)
+user:carol, act:manage, course:course-v1:MIT+PHYS101+2025, False
+user:carol, act:edit, course:course-v1:OpenedX+Math101+2025, False
 
-# John - Cross-library access (should be denied)
-user:john, act:edit, lib:math-basics, lib:math-basics, False
+# Carol - Cross-scope access (should be denied)
+user:carol, act:manage, org:OpenedX, False
+user:carol, act:manage, lib:math-basics, False
+
 
 # ===== LIBRARY REVIEWERS =====
-# Sarah - math-basics library reviewer (read-only access)
-user:sarah, act:read, lib:math-basics, lib:math-basics, True
 
-# Sarah - Higher privilege access (should be denied)
-user:sarah, act:write, lib:math-basics, lib:math-basics, False
-user:sarah, act:edit, lib:math-basics, lib:math-basics, False
-user:sarah, act:delete, lib:math-basics, lib:math-basics, False
+# David - math-basics library reviewer (read-only access)
+user:david, act:read, lib:math-basics, True
 
-# ===== REPORT VIEWERS =====
-# Maria - report viewer for OpenedX
-user:maria, act:read, report:openedx-usage-2025, org:OpenedX, True
+# David - Higher privilege access (should be denied)
+user:david, act:write, lib:math-basics, False
+user:david, act:edit, lib:math-basics, False
+user:david, act:delete, lib:math-basics, False
+user:david, act:manage, lib:math-basics, False
+
+# David - Cross-library access (should be denied)
+user:david, act:read, lib:science-101, False
+
+# David - Cross-scope access (should be denied)
+user:david, act:read, org:OpenedX, False
+
 
 # ===== UNAUTHORIZED USERS =====
-# Unknown user - should be denied access
-user:unknown, act:read, lib:math-basics, lib:math-basics, False
 
-# ====== SPECIAL CASE ======
-# This should be False, but it's returning True. This is a
-# special case, and we can prevent it from the Open edX layer
-user:mary, act:read, lib:science-101, lib:math-basics, False
+# Unknown user - should be denied access (no role assignments)
+user:unknown, act:read, lib:math-basics, False
+user:unknown, act:manage, *, False
+user:unknown, act:edit, org:OpenedX, False
+
+
+# ===== ACTION INHERITANCE TESTS =====
+
+# Test that manage implies edit, read, write, delete through g2 rules
+user:alice, act:edit, *, True
+user:alice, act:read, *, True
+user:alice, act:write, *, True
+user:alice, act:delete, *, True
+
+user:bob, act:edit, org:OpenedX, True
+user:bob, act:read, org:OpenedX, True
+user:bob, act:write, org:OpenedX, True
+
+user:eve, act:read, org:OpenedX, True
+user:eve, act:write, org:OpenedX, True
+
+user:carol, act:edit, course:course-v1:OpenedX+DemoX+CS101, True
+user:carol, act:read, course:course-v1:OpenedX+DemoX+CS101, True
+user:carol, act:write, course:course-v1:OpenedX+DemoX+CS101, True
