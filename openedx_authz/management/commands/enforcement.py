@@ -1,7 +1,7 @@
 """
 Django management command for testing Casbin enforcement policies.
 
-This command creates a Casbin enforcer from model.conf and policy.csv files,
+This command creates a Casbin enforcer from model.conf and auth.policy files,
 then tests enforcement for each request in request.sample.
 """
 
@@ -13,11 +13,11 @@ from django.core.management.base import BaseCommand, CommandError
 
 class Command(BaseCommand):
     """
-    Test Casbin enforcement policies using model.conf, policy.csv, and request.sample
+    Test Casbin enforcement policies using model.conf, auth.policy, and request.sample
     """
 
     help = (
-        "Test Casbin enforcement policies using model.conf, policy.csv, and request.sample. "
+        "Test Casbin enforcement policies using model.conf, auth.policy, and request.sample. "
         "Supports interactive mode for custom testing."
     )
 
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             "--policy-file",
             type=str,
             default="authz.policy",
-            help="Path to the policy CSV file (default: policy.csv)",
+            help="Path to the policy CSV file (default: auth.policy)",
         )
         parser.add_argument(
             "--request-file",
