@@ -171,12 +171,11 @@ class Command(BaseCommand):
         self.stdout.write("Test custom enforcement requests interactively.")
         self.stdout.write("Format: subject action object scope")
         self.stdout.write("Example: user:alice act:read lib:test-lib org:OpenedX")
-        self.stdout.write("Special commands: help, policies, users, quit")
         self.stdout.write("")
 
         while True:
             try:
-                user_input = input("Enter enforcement test (or command): ").strip()
+                user_input = input("Enter enforcement test: ").strip()
                 if not user_input:
                     continue
                 self._test_interactive_request(enforcer, user_input)
