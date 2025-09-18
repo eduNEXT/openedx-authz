@@ -44,7 +44,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--interactive",
             action="store_true",
-            help="Run in interactive mode for testing custom enforcement requests",
+            help="Run in interactive mode for enforcement requests",
         )
 
     def handle(self, *args, **options):
