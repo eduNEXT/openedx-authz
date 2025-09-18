@@ -1,4 +1,14 @@
+# Request format: subject, action, object, scope, expected_result
+#
+# subject = user or service with namespace (e.g., "user:alice", "service:lms")
+# action = action with namespace (e.g., "act:read", "act:manage", "act:edit")
+# object = resource with namespace (e.g., "lib:math-basics", "org:OpenedX")
+# scope = authorization context (e.g., "org:OpenedX", "*" for global)
+# expected_result = True if access should be granted, False if denied
+
+
 # ===== PLATFORM ADMINISTRATORS =====
+
 # Platform admin (user:admin) - should have access to everything
 user:admin, act:manage, lib:math-basics, *, True
 user:admin, act:delete, lib:science-101, *, True
@@ -6,8 +16,10 @@ user:admin, act:read, lib:any-library, *, True
 user:admin, act:write, lib:any-library, *, True
 user:admin, act:delete, lib:any-library, *, True
 
+
 # ===== ORGANIZATION ADMINISTRATORS =====
-# Alice - OpenedX org admin (should have access within OpenedX scope)
+
+# Alice - OpenedX org admin (should have access within 'OpenedX' scope)
 user:alice, act:manage, lib:openedx-library, org:OpenedX, True
 user:alice, act:delete, lib:openedx-content, org:OpenedX, True
 user:alice, act:write, lib:math-basics, org:OpenedX, True
@@ -30,7 +42,9 @@ user:alice, act:read, lib:another-restricted-content, org:OpenedX, False
 user:alice, act:write, lib:another-restricted-content, org:OpenedX, False
 user:alice, act:delete, lib:another-restricted-content, org:OpenedX, False
 
+
 # ===== ORGANIZATION EDITORS =====
+
 # Bob - MIT org editor (should have edit access within MIT scope)
 user:bob, act:edit, lib:mit-course, org:MIT, True
 user:bob, act:read, lib:mit-content, org:MIT, True
@@ -55,7 +69,9 @@ user:bob, act:edit, lib:mit-course, lib:mit-course, False
 user:paul, act:edit, lib:openedx-lib, org:OpenedX, True
 user:paul, act:edit, lib:mit-lib, org:MIT, False
 
+
 # ===== LIBRARY AUTHORS =====
+
 # Mary - math-basics library author
 user:mary, act:edit, lib:math-basics, lib:math-basics, True
 user:mary, act:read, lib:math-basics, lib:math-basics, True
@@ -79,7 +95,9 @@ user:john, act:read, lib:science-101, lib:science-101, True
 # John - Cross-library access (should be denied)
 user:john, act:edit, lib:math-basics, lib:math-basics, False
 
+
 # ===== LIBRARY REVIEWERS =====
+
 # Sarah - math-basics library reviewer (read-only access)
 user:sarah, act:read, lib:math-basics, lib:math-basics, True
 
@@ -88,15 +106,21 @@ user:sarah, act:write, lib:math-basics, lib:math-basics, False
 user:sarah, act:edit, lib:math-basics, lib:math-basics, False
 user:sarah, act:delete, lib:math-basics, lib:math-basics, False
 
+
 # ===== REPORT VIEWERS =====
+
 # Maria - report viewer for OpenedX
 user:maria, act:read, report:openedx-usage-2025, org:OpenedX, True
 
+
 # ===== UNAUTHORIZED USERS =====
+
 # Unknown user - should be denied access
 user:unknown, act:read, lib:math-basics, lib:math-basics, False
 
+
 # ====== SPECIAL CASE ======
+
 # This should be False, but it's returning True. This is a
 # special case, and we can prevent it from the Open edX layer
 user:mary, act:read, lib:science-101, lib:math-basics, False
