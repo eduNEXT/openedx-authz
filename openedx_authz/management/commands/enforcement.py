@@ -2,7 +2,7 @@
 Django management command for testing Casbin enforcement policies.
 
 This command creates a Casbin enforcer from model.conf and policy.csv files,
-then tests enforcement for each request in request.txt.
+then tests enforcement for each request in request.sample.
 """
 
 import os
@@ -13,11 +13,11 @@ from django.core.management.base import BaseCommand, CommandError
 
 class Command(BaseCommand):
     """
-    Test Casbin enforcement policies using model.conf, policy.csv, and request.txt
+    Test Casbin enforcement policies using model.conf, policy.csv, and request.sample
     """
 
     help = (
-        "Test Casbin enforcement policies using model.conf, policy.csv, and request.txt. "
+        "Test Casbin enforcement policies using model.conf, policy.csv, and request.sample. "
         "Supports interactive mode for custom testing."
     )
 
@@ -39,7 +39,7 @@ class Command(BaseCommand):
             "--request-file",
             type=str,
             default="request.sample",
-            help="Path to the request test file (default: request.txt)",
+            help="Path to the request test file (default: request.sample)",
         )
         parser.add_argument(
             "--interactive",
