@@ -79,11 +79,11 @@ class Command(BaseCommand):
 
             policies = enforcer.get_policy()
             roles = enforcer.get_grouping_policy()
-            role_inheritance = enforcer.get_named_grouping_policy("g2")
+            action_grouping = enforcer.get_named_grouping_policy("g2")
 
             self.stdout.write(f"✓ Loaded {len(policies)} policies")
             self.stdout.write(f"✓ Loaded {len(roles)} role assignments")
-            self.stdout.write(f"✓ Loaded {len(role_inheritance)} action inheritance rules")
+            self.stdout.write(f"✓ Loaded {len(action_grouping)} action grouping rules")
             self.stdout.write("")
 
             if interactive_mode:
