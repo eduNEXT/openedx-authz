@@ -10,7 +10,7 @@ from typing import TypedDict
 from unittest import TestCase
 
 import casbin
-from ddt import data, ddt
+from ddt import data, ddt, unpack
 
 
 class AuthRequest(TypedDict):
@@ -20,9 +20,22 @@ class AuthRequest(TypedDict):
 
     subject: str
     action: str
-    object: str
     scope: str
     expected_result: bool
+
+
+COMMON_ACTION_GROUPING = [
+    # manage implies all other actions
+    ["g2", "act:manage", "act:edit"],
+    ["g2", "act:manage", "act:read"],
+    ["g2", "act:manage", "act:write"],
+    ["g2", "act:manage", "act:delete"],
+    # edit implies read and write
+    ["g2", "act:edit", "act:read"],
+    ["g2", "act:edit", "act:write"],
+    ["g2", "act:edit", "act:read"],
+    ["g2", "act:edit", "act:write"],
+]
 
 
 @ddt
@@ -35,589 +48,356 @@ class CasbinEnforcementTestCase(TestCase):
     """
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         """Set up the Casbin enforcer with model and policy files."""
         super().setUpClass()
 
         engine_config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "engine", "config")
-        test_config_dir = os.path.join(os.path.dirname(__file__), "config")
-
         model_file = os.path.join(engine_config_dir, "model.conf")
-        policy_file = os.path.join(test_config_dir, "authz.policy")
 
         if not os.path.isfile(model_file):
             raise FileNotFoundError(f"Model file not found: {model_file}")
-        if not os.path.isfile(policy_file):
-            raise FileNotFoundError(f"Policy file not found: {policy_file}")
 
-        cls.enforcer = casbin.Enforcer(model_file, policy_file)
+        cls.enforcer = casbin.Enforcer(model_file)
 
-    def _test_enforcement(self, request: AuthRequest):
+    def _load_policy(self, policy: list[str] = None) -> None:
+        """Load policy into the enforcer."""
+        self.enforcer.clear_policy()
+        for rule in policy or []:
+            if rule[0] == "p":
+                self.enforcer.add_named_policy("p", rule[1:])
+            elif rule[0] == "g":
+                self.enforcer.add_named_grouping_policy("g", rule[1:])
+            elif rule[0] == "g2":
+                self.enforcer.add_named_grouping_policy("g2", rule[1:])
+            else:
+                raise ValueError(f"Invalid policy rule: {rule}")
+
+    def _test_enforcement(self, policy: list[str] = None, request: AuthRequest = None) -> None:
         """
         Helper method to test enforcement and provide detailed feedback.
 
         Args:
+            policy (list[str]): A list of policy rules to load into the enforcer
             request (AuthRequest): An authorization request containing all necessary parameters
         """
-        subject, action, obj, scope = request["subject"], request["action"], request["object"], request["scope"]
-        result = self.enforcer.enforce(subject, action, obj, scope)
-        error_msg = f"Request: {subject} {action} {obj} {scope}"
+        self._load_policy(policy)
+        subject, action, scope = request["subject"], request["action"], request["scope"]
+        result = self.enforcer.enforce(subject, action, scope)
+        error_msg = f"Request: {subject} {action} {scope}"
         self.assertEqual(result, request["expected_result"], error_msg)
 
 
 @ddt
-class PlatformAdministratorTests(CasbinEnforcementTestCase):
-    """Tests for platform administrator access."""
+class SystemWideRoleTests(CasbinEnforcementTestCase):
+    """Tests for system-wide roles with global access permissions."""
 
-    platform_admin_cases = [
+    POLICY = [
+        ["p", "role:platform_admin", "act:manage", "*", "allow"],
+        ["g", "user:user-1", "role:platform_admin"],
+    ] + COMMON_ACTION_GROUPING
+
+    GENERAL_CASES = [
         {
-            "subject": "user:admin",
+            "subject": "user:user-1",
             "action": "act:manage",
-            "object": "lib:math-basics",
             "scope": "*",
             "expected_result": True,
         },
         {
-            "subject": "user:admin",
-            "action": "act:delete",
-            "object": "lib:science-101",
-            "scope": "*",
+            "subject": "user:user-1",
+            "action": "act:manage",
+            "scope": "org:any-org",
             "expected_result": True,
         },
         {
-            "subject": "user:admin",
-            "action": "act:read",
-            "object": "lib:any-library",
-            "scope": "*",
+            "subject": "user:user-1",
+            "action": "act:manage",
+            "scope": "course-v1:any-org+any-course+any-course-run",
             "expected_result": True,
         },
         {
-            "subject": "user:admin",
-            "action": "act:write",
-            "object": "lib:any-library",
-            "scope": "*",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:admin",
-            "action": "act:delete",
-            "object": "lib:any-library",
-            "scope": "*",
+            "subject": "user:user-1",
+            "action": "act:manage",
+            "scope": "lib:any-library",
             "expected_result": True,
         },
     ]
 
-    @data(*platform_admin_cases)
-    def test_platform_admin_access(self, request: AuthRequest):
+    @data(*GENERAL_CASES)
+    def test_platform_admin_general_access(self, request: AuthRequest):
         """Test that platform administrators have full access to all resources."""
-        self._test_enforcement(request)
+        self._test_enforcement(self.POLICY, request)
 
 
 @ddt
-class OrganizationAdministratorTests(CasbinEnforcementTestCase):
-    """Tests for organization administrator access."""
+class ActionGroupingTests(CasbinEnforcementTestCase):
+    """Tests for action grouping."""
 
-    alice_allowed_cases = [
+    POLICY = [
+        ["p", "role:role-1", "act:manage", "org:any-org", "allow"],
+        ["g", "user:user-1", "role:role-1"],
+    ] + COMMON_ACTION_GROUPING
+
+    CASES = [
         {
-            "subject": "user:alice",
-            "action": "act:manage",
-            "object": "lib:openedx-library",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:delete",
-            "object": "lib:openedx-content",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:write",
-            "object": "lib:math-basics",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:read",
-            "object": "lib:openedx-test",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:write",
-            "object": "lib:openedx-test",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:delete",
-            "object": "lib:openedx-test",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:manage",
-            "object": "lib:math-basics",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:manage",
-            "object": "lib:science-101",
-            "scope": "org:OpenedX",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:alice",
+            "subject": "user:user-1",
             "action": "act:edit",
-            "object": "lib:science-101",
-            "scope": "org:OpenedX",
+            "scope": "org:any-org",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:read",
+            "scope": "org:any-org",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:write",
+            "scope": "org:any-org",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:delete",
+            "scope": "org:any-org",
             "expected_result": True,
         },
     ]
 
-    alice_denied_cases = [
-        {
-            "subject": "user:alice",
-            "action": "act:manage",
-            "object": "lib:mit-library",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:read",
-            "object": "lib:mit-content",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:manage",
-            "object": "lib:openedx-lib",
-            "scope": "*",
-            "expected_result": False,
-        },
-    ]
-
-    alice_restricted_cases = [
-        {
-            "subject": "user:alice",
-            "action": "act:manage",
-            "object": "lib:another-restricted-content",
-            "scope": "org:OpenedX",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:edit",
-            "object": "lib:another-restricted-content",
-            "scope": "org:OpenedX",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:read",
-            "object": "lib:another-restricted-content",
-            "scope": "org:OpenedX",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:write",
-            "object": "lib:another-restricted-content",
-            "scope": "org:OpenedX",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:alice",
-            "action": "act:delete",
-            "object": "lib:another-restricted-content",
-            "scope": "org:OpenedX",
-            "expected_result": False,
-        },
-    ]
-
-    @data(*alice_allowed_cases)
-    def test_alice_org_admin_allowed_access(self, request: AuthRequest):
-        """Test that Alice (OpenedX org admin) has proper access within her scope."""
-        self._test_enforcement(request)
-
-    @data(*alice_denied_cases)
-    def test_alice_cross_org_denied_access(self, request: AuthRequest):
-        """Test that Alice is denied access outside her organization scope."""
-        self._test_enforcement(request)
-
-    @data(*alice_restricted_cases)
-    def test_alice_restricted_content_denied(self, request: AuthRequest):
-        """Test that Alice is denied access to restricted content."""
-        self._test_enforcement(request)
+    @data(*CASES)
+    def test_action_grouping_access(self, request: AuthRequest):
+        """Test that users have access through action grouping."""
+        self._test_enforcement(self.POLICY, request)
 
 
 @ddt
-class OrganizationEditorTests(CasbinEnforcementTestCase):
-    """Tests for organization editor access."""
+class RoleAssignmentTests(CasbinEnforcementTestCase):
+    """Tests for role assignment."""
 
-    bob_allowed_cases = [
-        {
-            "subject": "user:bob",
-            "action": "act:edit",
-            "object": "lib:mit-course",
-            "scope": "org:MIT",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:read",
-            "object": "lib:mit-content",
-            "scope": "org:MIT",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:write",
-            "object": "lib:mit-data",
-            "scope": "org:MIT",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:read",
-            "object": "lib:mit-test",
-            "scope": "org:MIT",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:write",
-            "object": "lib:mit-test",
-            "scope": "org:MIT",
-            "expected_result": True,
-        },
-    ]
+    POLICY = [
+        # Policies
+        ["p", "role:platform_admin", "act:manage", "*", "allow"],
+        ["p", "role:org_admin", "act:manage", "org:any-org", "allow"],
+        ["p", "role:org_editor", "act:edit", "org:any-org", "allow"],
+        ["p", "role:org_author", "act:write", "org:any-org", "allow"],
+        ["p", "role:course_admin", "act:manage", "course-v1:any-org+any-course+any-course-run", "allow"],
+        ["p", "role:library_admin", "act:manage", "lib:any-library", "allow"],
+        ["p", "role:library_editor", "act:edit", "lib:any-library", "allow"],
+        ["p", "role:library_reviewer", "act:read", "lib:any-library", "allow"],
+        ["p", "role:library_author", "act:write", "lib:any-library", "allow"],
+        # Role assignments
+        ["g", "user:user-1", "role:platform_admin"],
+        ["g", "user:user-2", "role:org_admin"],
+        ["g", "user:user-3", "role:org_editor"],
+        ["g", "user:user-4", "role:org_author"],
+        ["g", "user:user-5", "role:course_admin"],
+        ["g", "user:user-6", "role:library_admin"],
+        ["g", "user:user-7", "role:library_editor"],
+        ["g", "user:user-8", "role:library_reviewer"],
+        ["g", "user:user-9", "role:library_author"],
+    ] + COMMON_ACTION_GROUPING
 
-    bob_denied_higher_privilege = [
+    CASES = [
         {
-            "subject": "user:bob",
-            "action": "act:delete",
-            "object": "lib:mit-course",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:bob",
+            "subject": "user:user-1",
             "action": "act:manage",
-            "object": "lib:mit-course",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:delete",
-            "object": "lib:mit-test",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-    ]
-
-    bob_denied_restricted = [
-        {
-            "subject": "user:bob",
-            "action": "act:edit",
-            "object": "lib:restricted-content",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:read",
-            "object": "lib:restricted-content",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:bob",
-            "action": "act:write",
-            "object": "lib:restricted-content",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-    ]
-
-    bob_denied_scope_isolation = [
-        {
-            "subject": "user:bob",
-            "action": "act:edit",
-            "object": "lib:mit-course",
-            "scope": "lib:mit-course",
-            "expected_result": False,
-        },
-    ]
-
-    paul_cases = [
-        {
-            "subject": "user:paul",
-            "action": "act:edit",
-            "object": "lib:openedx-lib",
-            "scope": "org:OpenedX",
+            "scope": "org:any-org",
             "expected_result": True,
         },
         {
-            "subject": "user:paul",
-            "action": "act:edit",
-            "object": "lib:mit-lib",
-            "scope": "org:MIT",
-            "expected_result": False,
-        },
-    ]
-
-    @data(*bob_allowed_cases)
-    def test_bob_org_editor_allowed_access(self, request: AuthRequest):
-        """Test that Bob (MIT org editor) has proper edit access within his scope."""
-        self._test_enforcement(request)
-
-    @data(*bob_denied_higher_privilege)
-    def test_bob_denied_higher_privileges(self, request: AuthRequest):
-        """Test that Bob is denied higher privilege actions like delete/manage."""
-        self._test_enforcement(request)
-
-    @data(*bob_denied_restricted)
-    def test_bob_denied_restricted_content(self, request: AuthRequest):
-        """Test that Bob is denied access to restricted content."""
-        self._test_enforcement(request)
-
-    @data(*bob_denied_scope_isolation)
-    def test_bob_denied_scope_isolation(self, request: AuthRequest):
-        """Test that Bob is denied access when scope doesn't match his role scope."""
-        self._test_enforcement(request)
-
-    @data(*paul_cases)
-    def test_paul_editor_access(self, request: AuthRequest):
-        """Test Paul's editor access across different organizations."""
-        self._test_enforcement(request)
-
-
-@ddt
-class LibraryAuthorTests(CasbinEnforcementTestCase):
-    """Tests for library author access."""
-
-    mary_allowed_cases = [
-        {
-            "subject": "user:mary",
-            "action": "act:edit",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:mary",
-            "action": "act:read",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": True,
-        },
-        {
-            "subject": "user:mary",
-            "action": "act:write",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": True,
-        },
-    ]
-
-    mary_denied_higher_privilege = [
-        {
-            "subject": "user:mary",
-            "action": "act:delete",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:mary",
+            "subject": "user:user-2",
             "action": "act:manage",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": False,
-        },
-    ]
-
-    mary_denied_cross_library = [
-        {
-            "subject": "user:mary",
-            "action": "act:edit",
-            "object": "lib:science-101",
-            "scope": "lib:science-101",
-            "expected_result": False,
-        },
-        {
-            "subject": "user:mary",
-            "action": "act:read",
-            "object": "lib:science-101",
-            "scope": "lib:science-101",
-            "expected_result": False,
-        },
-    ]
-
-    mary_denied_scope_isolation = [
-        {
-            "subject": "user:mary",
-            "action": "act:edit",
-            "object": "lib:math-basics",
-            "scope": "org:OpenedX",
-            "expected_result": False,
-        },
-    ]
-
-    john_allowed_cases = [
-        {
-            "subject": "user:john",
-            "action": "act:edit",
-            "object": "lib:science-101",
-            "scope": "lib:science-101",
+            "scope": "org:any-org",
             "expected_result": True,
         },
         {
-            "subject": "user:john",
-            "action": "act:read",
-            "object": "lib:science-101",
-            "scope": "lib:science-101",
-            "expected_result": True,
-        },
-    ]
-
-    john_denied_cross_library = [
-        {
-            "subject": "user:john",
+            "subject": "user:user-3",
             "action": "act:edit",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": False,
-        },
-    ]
-
-    @data(*mary_allowed_cases)
-    def test_mary_library_author_allowed_access(self, request: AuthRequest):
-        """Test that Mary has proper access to her assigned library."""
-        self._test_enforcement(request)
-
-    @data(*mary_denied_higher_privilege)
-    def test_mary_denied_higher_privileges(self, request: AuthRequest):
-        """Test that Mary is denied higher privilege actions."""
-        self._test_enforcement(request)
-
-    @data(*mary_denied_cross_library)
-    def test_mary_denied_cross_library_access(self, request: AuthRequest):
-        """Test that Mary is denied access to other libraries."""
-        self._test_enforcement(request)
-
-    @data(*mary_denied_scope_isolation)
-    def test_mary_denied_scope_isolation(self, request: AuthRequest):
-        """Test that Mary is denied access when scope doesn't match her role scope."""
-        self._test_enforcement(request)
-
-    @data(*john_allowed_cases)
-    def test_john_library_author_allowed_access(self, request: AuthRequest):
-        """Test that John has proper access to his assigned library."""
-        self._test_enforcement(request)
-
-    @data(*john_denied_cross_library)
-    def test_john_denied_cross_library_access(self, request: AuthRequest):
-        """Test that John is denied access to other libraries."""
-        self._test_enforcement(request)
-
-
-@ddt
-class LibraryReviewerTests(CasbinEnforcementTestCase):
-    """Tests for library reviewer access."""
-
-    sarah_allowed_cases = [
-        {
-            "subject": "user:sarah",
-            "action": "act:read",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
+            "scope": "org:any-org",
             "expected_result": True,
         },
-    ]
-
-    sarah_denied_cases = [
         {
-            "subject": "user:sarah",
+            "subject": "user:user-4",
             "action": "act:write",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": False,
+            "scope": "org:any-org",
+            "expected_result": True,
         },
         {
-            "subject": "user:sarah",
+            "subject": "user:user-5",
+            "action": "act:manage",
+            "scope": "course-v1:any-org+any-course+any-course-run",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-6",
+            "action": "act:manage",
+            "scope": "lib:any-library",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-7",
             "action": "act:edit",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": False,
+            "scope": "lib:any-library",
+            "expected_result": True,
         },
         {
-            "subject": "user:sarah",
-            "action": "act:delete",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
-            "expected_result": False,
-        },
-    ]
-
-    @data(*sarah_allowed_cases)
-    def test_sarah_library_reviewer_allowed_access(self, request: AuthRequest):
-        """Test that Sarah has proper read-only access to her assigned library."""
-        self._test_enforcement(request)
-
-    @data(*sarah_denied_cases)
-    def test_sarah_denied_higher_privileges(self, request: AuthRequest):
-        """Test that Sarah is denied write/edit/delete access."""
-        self._test_enforcement(request)
-
-
-@ddt
-class ReportViewerTests(CasbinEnforcementTestCase):
-    """Tests for report viewer access."""
-
-    maria_cases = [
-        {
-            "subject": "user:maria",
+            "subject": "user:user-8",
             "action": "act:read",
-            "object": "report:openedx-usage-2025",
-            "scope": "org:OpenedX",
+            "scope": "lib:any-library",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-9",
+            "action": "act:write",
+            "scope": "lib:any-library",
             "expected_result": True,
         },
     ]
 
-    @data(*maria_cases)
-    def test_maria_report_viewer_access(self, request: AuthRequest):
-        """Test that Maria has proper access to reports in her scope."""
-        self._test_enforcement(request)
+    @data(*CASES)
+    def test_role_assignment_access(self, request: AuthRequest):
+        """Test that users have access through role assignment."""
+        self._test_enforcement(self.POLICY, request)
 
 
 @ddt
-class UnauthorizedUserTests(CasbinEnforcementTestCase):
-    """Tests for unauthorized user access."""
+class DeniedAccessTests(CasbinEnforcementTestCase):
+    """Tests for denied access."""
 
-    unauthorized_cases = [
+    POLICY = [
+        ["p", "role:platform_admin", "act:manage", "*", "allow"],
+        ["p", "role:platform_admin", "act:manage", "org:restricted-org", "deny"],
+        ["g", "user:user-1", "role:platform_admin"],
+    ] + COMMON_ACTION_GROUPING
+
+    CASES = [
         {
-            "subject": "user:unknown",
+            "subject": "user:user-1",
+            "action": "act:manage",
+            "scope": "org:allowed-org",
+            "expected_result": True,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:manage",
+            "scope": "org:restricted-org",
+            "expected_result": False,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:edit",
+            "scope": "org:restricted-org",
+            "expected_result": False,
+        },
+        {
+            "subject": "user:user-1",
             "action": "act:read",
-            "object": "lib:math-basics",
-            "scope": "lib:math-basics",
+            "scope": "org:restricted-org",
+            "expected_result": False,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:write",
+            "scope": "org:restricted-org",
+            "expected_result": False,
+        },
+        {
+            "subject": "user:user-1",
+            "action": "act:delete",
+            "scope": "org:restricted-org",
             "expected_result": False,
         },
     ]
 
-    @data(*unauthorized_cases)
-    def test_unauthorized_user_denied_access(self, request: AuthRequest):
-        """Test that unknown/unauthorized users are denied access."""
-        self._test_enforcement(request)
+    @data(*CASES)
+    def test_denied_access(self, request: AuthRequest):
+        """Test that users have denied access."""
+        self._test_enforcement(self.POLICY, request)
+
+
+@ddt
+class WildcardScopeTests(CasbinEnforcementTestCase):
+    """Tests for wildcard scope."""
+
+    POLICY = [
+        # Policies
+        ["p", "role:platform_admin", "act:manage", "*", "allow"],
+        ["p", "role:org_admin", "act:manage", "org:*", "allow"],
+        ["p", "role:course_admin", "act:manage", "course-v1:*", "allow"],
+        ["p", "role:library_admin", "act:manage", "lib:*", "allow"],
+        # Role assignments
+        ["g", "user:user-1", "role:platform_admin"],
+        ["g", "user:user-2", "role:org_admin"],
+        ["g", "user:user-3", "role:course_admin"],
+        ["g", "user:user-4", "role:library_admin"],
+    ] + COMMON_ACTION_GROUPING
+
+    @data(
+        ("*", True),
+        ("org:MIT", True),
+        ("course-v1:OpenedX+DemoX+CS101", True),
+        ("lib:math-basics", True),
+    )
+    @unpack
+    def test_wildcard_global_access(self, scope: str, expected_result: bool):
+        """Test that users have access through wildcard global scope."""
+        request = {
+            "subject": "user:user-1",
+            "action": "act:manage",
+            "scope": scope,
+            "expected_result": expected_result,
+        }
+        self._test_enforcement(self.POLICY, request)
+
+    @data(
+        ("*", False),
+        ("org:MIT", True),
+        ("course-v1:OpenedX+DemoX+CS101", False),
+        ("lib:math-basics", False),
+    )
+    @unpack
+    def test_wildcard_org_access(self, scope: str, expected_result: bool):
+        """Test that users have access through wildcard org scope."""
+        request = {
+            "subject": "user:user-2",
+            "action": "act:manage",
+            "scope": scope,
+            "expected_result": expected_result,
+        }
+        self._test_enforcement(self.POLICY, request)
+
+    @data(
+        ("*", False),
+        ("org:MIT", False),
+        ("course-v1:OpenedX+DemoX+CS101", True),
+        ("lib:math-basics", False),
+    )
+    @unpack
+    def test_wildcard_course_access(self, scope: str, expected_result: bool):
+        """Test that users have access through wildcard course scope."""
+        request = {
+            "subject": "user:user-3",
+            "action": "act:manage",
+            "scope": scope,
+            "expected_result": expected_result,
+        }
+        self._test_enforcement(self.POLICY, request)
+
+    @data(
+        ("*", False),
+        ("org:MIT", False),
+        ("course-v1:OpenedX+DemoX+CS101", False),
+        ("lib:math-basics", True),
+    )
+    @unpack
+    def test_wildcard_library_access(self, scope: str, expected_result: bool):
+        """Test that users have access through wildcard library scope."""
+        request = {
+            "subject": "user:user-4",
+            "action": "act:manage",
+            "scope": scope,
+            "expected_result": expected_result,
+        }
+        self._test_enforcement(self.POLICY, request)
