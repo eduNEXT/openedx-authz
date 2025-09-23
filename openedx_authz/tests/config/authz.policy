@@ -1,56 +1,64 @@
-# ===== POLICIES (p) =====
+############################################
+# Example Policies for Scope-based Model
+############################################
 
-# Platform-level permissions
+# ===== Policies (p) =====
+# Format: p, subject(role), action, scope, effect
+# Note: Scope-based authorization naturally prevents cross-scope access
+
+# Global platform admin: can manage everything
 p, role:platform_admin, act:manage, *, allow
 
-# Organization-level permissions
-p, role:org_admin, act:manage, lib:*, allow
-p, role:org_editor, act:edit, lib:*, allow
+# Org admin: can manage all resources within org OpenedX
+p, role:org_admin, act:manage, org:OpenedX, allow
 
-# Library-specific permissions
-p, role:library_author, act:edit, lib:*, allow
-p, role:library_reviewer, act:read, lib:*, allow
-p, role:editor, act:edit, lib:*, allow
+# Org editor: can edit resources within org OpenedX
+p, role:org_editor, act:edit, org:OpenedX, allow
 
-# Report permissions
-p, role:report_viewer, act:read, report:*, allow
+# Course instructor: can manage resources within a specific course
+p, role:course_instructor, act:manage, course-v1:OpenedX+DemoX+CS101, allow
 
-# Access restrictions and exceptions
-p, role:org_editor, act:edit, lib:restricted-content, deny
-p, role:org_admin, act:manage, lib:another-restricted-content, deny
+# Reviewer: can only read within a specific library
+p, role:library_reviewer, act:read, lib:math-basics, allow
 
+# Org admin all: can manage all orgs
+p, role:org_admin_all, act:manage, org:*, allow
 
-# ===== ROLE ASSIGNMENTS (g) =====
-
-# Platform administrators
-g, user:admin, role:platform_admin, *
-
-# Organization administrators
-g, user:alice, role:org_admin, org:OpenedX
-
-# Organization editors
-g, user:bob, role:org_editor, org:MIT
-g, user:paul, role:editor, org:OpenedX
-
-# Library authors
-g, user:mary, role:library_author, lib:math-basics
-g, user:john, role:library_author, lib:science-101
-
-# Library reviewers
-g, user:sarah, role:library_reviewer, lib:math-basics
-
-# Report viewers
-g, user:maria, role:report_viewer, org:OpenedX
+# Explictly deny the org admin for one org
+p, role:org_admin_all, act:manage, org:2U, deny
 
 
-# ===== ACTION GROUPING (g2) =====
+# ===== Role Assignments (g) =====
+# Format: g, user, role
 
-# manage implies edit, delete, read, write
+# Alice is platform admin
+g, user:alice, role:platform_admin
+
+# Bob is org admin
+g, user:bob, role:org_admin
+
+# Eve is org editor
+g, user:eve, role:org_editor
+
+# Carol is course instructor
+g, user:carol, role:course_instructor
+
+# David is library reviewer
+g, user:david, role:library_reviewer
+
+# Steve is org admin (all orgs)
+g, user:steve, role:org_admin_all
+
+
+# ===== Action Grouping (g2) =====
+# Format: g2, high-level-action, implied-action
+
+# manage implies all other actions
 g2, act:manage, act:edit
+g2, act:manage, act:read
+g2, act:manage, act:write
 g2, act:manage, act:delete
-g2, act:edit, act:read
-g2, act:edit, act:write
 
-# edit implies read, write
+# edit implies read and write
 g2, act:edit, act:read
 g2, act:edit, act:write

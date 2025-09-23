@@ -8,7 +8,7 @@ authorization enforcement requests.
 The command supports:
 - Loading Casbin model from the built-in model.conf file
 - Using custom policy files (specified via --policy-file-path argument)
-- Interactive testing with format: subject action object scope
+- Interactive testing with format: subject action scope
 - Real-time enforcement results with visual feedback (✓ ALLOWED / ✗ DENIED)
 - Display of loaded policies, role assignments, and action grouping rules
 
@@ -16,7 +16,7 @@ Example usage:
     python manage.py lms enforcement --policy-file-path /path/to/authz.policy
 
 Example test input:
-    user:alice act:read lib:test-lib org:OpenedX
+    user:alice act:read org:OpenedX
 """
 
 import os
@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
     help = (
         "Interactive mode for testing Casbin enforcement policies using model.conf and a custom policy file. "
-        "Provides real-time authorization testing with format: subject action object scope. "
+        "Provides real-time authorization testing with format: subject action scope. "
         "Use --policy-file-path to specify the policy file location."
     )
 
@@ -114,7 +114,7 @@ class Command(BaseCommand):
         """Start the interactive enforcement testing shell.
 
         Provides a continuous loop where users can input enforcement requests
-        in the format 'subject action object scope' and receive immediate
+        in the format 'subject action scope' and receive immediate
         authorization results with visual feedback.
 
         Args:
@@ -127,8 +127,8 @@ class Command(BaseCommand):
         self.stdout.write("Test custom enforcement requests interactively.")
         self.stdout.write("Enter 'quit', 'exit', or 'q' to exit the interactive mode.")
         self.stdout.write("")
-        self.stdout.write("Format: subject action object scope")
-        self.stdout.write("Example: user:alice act:read lib:test-lib org:OpenedX")
+        self.stdout.write("Format: subject action scope")
+        self.stdout.write("Example: user:alice act:read org:OpenedX")
         self.stdout.write("")
 
         while True:
@@ -154,29 +154,28 @@ class Command(BaseCommand):
 
         Args:
             enforcer (casbin.Enforcer): The Casbin enforcer instance to use for testing.
-            user_input (str): The user's input string in format 'subject action object scope'.
+            user_input (str): The user's input string in format 'subject action scope'.
 
         Expected format:
             subject: The requesting entity (e.g., 'user:alice')
             action: The requested action (e.g., 'act:read')
-            object: The target resource (e.g., 'lib:test-lib')
             scope: The authorization context (e.g., 'org:OpenedX')
         """
         try:
             parts = [part.strip() for part in user_input.split()]
-            if len(parts) != 4:
-                self.stdout.write(self.style.ERROR(f"✗ Invalid format. Expected 4 parts, got {len(parts)}"))
-                self.stdout.write("Format: subject action object scope")
-                self.stdout.write("Example: user:alice act:read lib:test-lib org:OpenedX")
+            if len(parts) != 3:
+                self.stdout.write(self.style.ERROR(f"✗ Invalid format. Expected 3 parts, got {len(parts)}"))
+                self.stdout.write("Format: subject action scope")
+                self.stdout.write("Example: user:alice act:read org:OpenedX")
                 return
 
-            subject, action, obj, scope = parts
-            result = enforcer.enforce(subject, action, obj, scope)
+            subject, action, scope = parts
+            result = enforcer.enforce(subject, action, scope)
 
             if result:
-                self.stdout.write(self.style.SUCCESS(f"✓ ALLOWED: {subject} {action} {obj} {scope}"))
+                self.stdout.write(self.style.SUCCESS(f"✓ ALLOWED: {subject} {action} {scope}"))
             else:
-                self.stdout.write(self.style.ERROR(f"✗ DENIED: {subject} {action} {obj} {scope}"))
+                self.stdout.write(self.style.ERROR(f"✗ DENIED: {subject} {action} {scope}"))
 
         except (ValueError, IndexError, TypeError) as e:
             self.stdout.write(self.style.ERROR(f"✗ Error processing request: {str(e)}"))
