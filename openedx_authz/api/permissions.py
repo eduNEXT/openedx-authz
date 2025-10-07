@@ -7,6 +7,7 @@ are not explicitly defined, but are inferred from the policy rules.
 
 from openedx_authz.api.data import ActionData, PermissionData, PolicyIndex, ScopeData, SubjectData
 from openedx_authz.engine.enforcer import AuthzEnforcer
+from openedx_authz.api.decorators import manage_policy_lifecycle
 
 __all__ = [
     "get_permission_from_policy",
@@ -49,6 +50,7 @@ def get_all_permissions_in_scope(scope: ScopeData) -> list[PermissionData]:
     return [get_permission_from_policy(action) for action in actions]
 
 
+@manage_policy_lifecycle(filter_on="scope")
 def is_subject_allowed(
     subject: SubjectData,
     action: ActionData,
