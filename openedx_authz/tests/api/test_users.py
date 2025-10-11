@@ -2,7 +2,16 @@
 
 from ddt import data, ddt, unpack
 
+<<<<<<< HEAD
 from openedx_authz.api.data import ContentLibraryData, RoleAssignmentData, RoleData, UserData
+=======
+from openedx_authz.api.data import (
+    ContentLibraryData,
+    RoleAssignmentData,
+    RoleData,
+    UserData,
+)
+>>>>>>> 6e040cc (test: fix and refactor api tests)
 from openedx_authz.api.users import (
     assign_role_to_user_in_scope,
     batch_assign_role_to_users_in_scope,
