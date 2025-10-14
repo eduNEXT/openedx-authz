@@ -88,7 +88,7 @@ def get_permissions_for_roles(
     return permissions_by_role
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def get_permissions_for_active_roles_in_scope(
     scope: ScopeData, role: RoleData | None = None
 ) -> dict[str, dict[str, list[PermissionData | str]]]:
@@ -140,7 +140,7 @@ def get_permissions_for_active_roles_in_scope(
     )
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def get_role_definitions_in_scope(scope: ScopeData) -> list[RoleData]:
     """Get all role definitions available in a specific scope.
 
@@ -192,7 +192,7 @@ def get_all_roles_names() -> list[str]:
     return AuthzEnforcer.get_enforcer().get_all_subjects()
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def get_all_roles_in_scope(scope: ScopeData) -> list[list[str]]:
     """Get all the available role grouping policies in a specific scope.
 
@@ -209,7 +209,7 @@ def get_all_roles_in_scope(scope: ScopeData) -> list[list[str]]:
     )
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def assign_role_to_subject_in_scope(
     subject: SubjectData, role: RoleData, scope: ScopeData
 ) -> bool:
@@ -232,7 +232,7 @@ def assign_role_to_subject_in_scope(
     )
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def batch_assign_role_to_subjects_in_scope(
     subjects: list[SubjectData], role: RoleData, scope: ScopeData
 ) -> None:
@@ -246,7 +246,7 @@ def batch_assign_role_to_subjects_in_scope(
         assign_role_to_subject_in_scope(subject, role, scope)
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def unassign_role_from_subject_in_scope(
     subject: SubjectData, role: RoleData, scope: ScopeData
 ) -> bool:
@@ -267,7 +267,7 @@ def unassign_role_from_subject_in_scope(
     )
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def batch_unassign_role_from_subjects_in_scope(
     subjects: list[SubjectData], role: RoleData, scope: ScopeData
 ) -> None:
@@ -310,7 +310,7 @@ def get_subject_role_assignments(subject: SubjectData) -> list[RoleAssignmentDat
     return role_assignments
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def get_subject_role_assignments_in_scope(
     subject: SubjectData, scope: ScopeData
 ) -> list[RoleAssignmentData]:
@@ -346,7 +346,7 @@ def get_subject_role_assignments_in_scope(
     return role_assignments
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def get_subject_role_assignments_for_role_in_scope(
     role: RoleData, scope: ScopeData
 ) -> list[RoleAssignmentData]:
@@ -384,7 +384,7 @@ def get_subject_role_assignments_for_role_in_scope(
     return role_assignments
 
 
-@manage_policy_lifecycle(filter_on="scope")
+@manage_policy_lifecycle()
 def get_all_subject_role_assignments_in_scope(scope: ScopeData) -> list[RoleAssignmentData]:
     """Get all the subjects assigned to any role in a specific scope.
 
