@@ -13,7 +13,7 @@ from casbin_adapter.models import CasbinRule
 from django.core.management.base import BaseCommand
 
 from openedx_authz import ROOT_DIRECTORY
-from openedx_authz.engine.enforcer import enforcer as global_enforcer
+from openedx_authz.engine.enforcer import AuthzEnforcer
 from openedx_authz.engine.utils import migrate_policy_between_enforcers
 
 
@@ -83,7 +83,7 @@ class Command(BaseCommand):
             CasbinRule.objects.all().delete()
 
         source_enforcer = casbin.Enforcer(model_file_path, policy_file_path)
-        self.migrate_policies(source_enforcer, global_enforcer)
+        self.migrate_policies(source_enforcer, AuthzEnforcer.get_enforcer())
 
     def migrate_policies(self, source_enforcer, target_enforcer):
         """Migrate policies from the source enforcer to the target enforcer.
