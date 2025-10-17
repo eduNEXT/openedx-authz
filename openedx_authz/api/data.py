@@ -394,8 +394,8 @@ class ContentLibraryData(ScopeData):
         """
         try:
             library_key = LibraryLocatorV2.from_string(self.library_id)
-            ContentLibrary.objects.get_by_key(library_key=library_key)
-            return True
+            obj = ContentLibrary.objects.get_by_key(library_key=library_key)
+            return obj.library_key == library_key
         except ContentLibrary.DoesNotExist:
             return False
 
