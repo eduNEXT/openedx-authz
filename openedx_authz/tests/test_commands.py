@@ -103,7 +103,7 @@ class EnforcementCommandTests(TestCase):
     def test_run_interactive_mode_displays_help(self):
         """Test that the interactive mode runs."""
         with patch("builtins.input", side_effect=["quit"]):
-            self.command._run_interactive_mode(self.enforcer)
+            self.command._run_interactive_mode()
 
         example_text = f"Example: {make_user_key('alice')} {make_action_key('read')} {make_scope_key('org', 'OpenedX')}"
         self.assertIn("Interactive Mode", self.buffer.getvalue())
@@ -117,7 +117,7 @@ class EnforcementCommandTests(TestCase):
         input_values = ["", "", "", "quit"]
 
         with patch("builtins.input", side_effect=input_values) as mock_input:
-            self.command._run_interactive_mode(self.enforcer)
+            self.command._run_interactive_mode()
 
         self.assertEqual(mock_input.call_count, len(input_values))
 
@@ -130,7 +130,7 @@ class EnforcementCommandTests(TestCase):
         """Test that the interactive mode processes the request."""
         with patch("builtins.input", side_effect=user_input + ["quit"]) as mock_input:
             with patch.object(self.command, "_test_interactive_request") as mock_method:
-                self.command._run_interactive_mode(self.enforcer)
+                self.command._run_interactive_mode()
 
         self.assertEqual(mock_input.call_count, len(user_input) + 1)
         self.assertEqual(mock_method.call_count, len(user_input))
@@ -141,7 +141,7 @@ class EnforcementCommandTests(TestCase):
     def test_quit_commands_case_insensitive(self, quit_command: str):
         """Test that all quit commands work regardless of case."""
         with patch("builtins.input", side_effect=[quit_command]) as mock_input:
-            self.command._run_interactive_mode(self.enforcer)
+            self.command._run_interactive_mode()
 
         self.assertEqual(mock_input.call_count, 1)
 
@@ -149,7 +149,7 @@ class EnforcementCommandTests(TestCase):
     def test_handles_exceptions(self, exception: Exception):
         """Test that interactive mode handles exceptions gracefully."""
         with patch("builtins.input", side_effect=exception):
-            self.command._run_interactive_mode(self.enforcer)
+            self.command._run_interactive_mode()
 
         self.assertIn("Exiting interactive mode...", self.buffer.getvalue())
 
@@ -158,7 +158,7 @@ class EnforcementCommandTests(TestCase):
         self.enforcer.enforce.return_value = True
         user_input = f"{make_user_key('alice')} {make_action_key('read')} {make_scope_key('org', 'OpenedX')}"
 
-        self.command._test_interactive_request(self.enforcer, user_input)
+        self.command._test_interactive_request(user_input)
 
         allowed_output = self.buffer.getvalue()
         self.assertIn(f"✓ ALLOWED: {user_input}", allowed_output)
@@ -168,7 +168,7 @@ class EnforcementCommandTests(TestCase):
         self.enforcer.enforce.return_value = False
         user_input = f"{make_user_key('alice')} {make_action_key('delete')} {make_scope_key('org', 'OpenedX')}"
 
-        self.command._test_interactive_request(self.enforcer, user_input)
+        self.command._test_interactive_request(user_input)
 
         denied_output = self.buffer.getvalue()
         self.assertIn(f"✗ DENIED: {user_input}", denied_output)
@@ -177,7 +177,7 @@ class EnforcementCommandTests(TestCase):
         """Test that `_test_interactive_request` reports invalid input format."""
         user_input = f"{make_user_key('alice')} {make_action_key('read')}"
 
-        self.command._test_interactive_request(self.enforcer, user_input)
+        self.command._test_interactive_request(user_input)
 
         invalid_output = self.buffer.getvalue()
         self.assertIn("✗ Invalid format. Expected 3 parts, got 2", invalid_output)
@@ -190,7 +190,7 @@ class EnforcementCommandTests(TestCase):
         self.enforcer.enforce.side_effect = exception
         user_input = f"{make_user_key('alice')} {make_action_key('read')} {make_scope_key('org', 'OpenedX')}"
 
-        self.command._test_interactive_request(self.enforcer, user_input)
+        self.command._test_interactive_request(user_input)
 
         error_output = self.buffer.getvalue()
         self.assertIn(f"✗ Error processing request: {str(exception)}", error_output)
