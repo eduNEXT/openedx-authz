@@ -60,7 +60,7 @@ def get_permissions_for_single_role(
         list[PermissionData]: A list of PermissionData objects associated with the given role.
     """
     enforcer = AuthzEnforcer.get_enforcer()
-    policies = enforcer.get_implicit_permissions_for_user(role.namespaced_key)
+    policies = enforcer.get_implicit_permissions_for_user(role.normalized_key)
     return [get_permission_from_policy(policy) for policy in policies]
 
 
@@ -118,7 +118,7 @@ def get_permissions_for_active_roles_in_scope(
     enforcer = AuthzEnforcer.get_enforcer()
     enforcer.load_policy()
     filtered_policy = enforcer.get_filtered_grouping_policy(
-        GroupingPolicyIndex.SCOPE.value, scope.namespaced_key
+        GroupingPolicyIndex.SCOPE.value, scope.normalized_key
     )
 
     if role:
@@ -198,7 +198,7 @@ def get_all_roles_in_scope(scope: ScopeData) -> list[list[str]]:
     enforcer = AuthzEnforcer.get_enforcer()
     enforcer.load_policy()
     return enforcer.get_filtered_grouping_policy(
-        GroupingPolicyIndex.SCOPE.value, scope.namespaced_key
+        GroupingPolicyIndex.SCOPE.value, scope.normalized_key
     )
 
 
@@ -218,9 +218,9 @@ def assign_role_to_subject_in_scope(
     enforcer = AuthzEnforcer.get_enforcer()
     enforcer.load_policy()
     return enforcer.add_role_for_user_in_domain(
-        subject.namespaced_key,
-        role.namespaced_key,
-        scope.namespaced_key,
+        subject.normalized_key,
+        role.normalized_key,
+        scope.normalized_key,
     )
 
 
@@ -253,7 +253,7 @@ def unassign_role_from_subject_in_scope(
     enforcer = AuthzEnforcer.get_enforcer()
     enforcer.load_policy()
     return enforcer.delete_roles_for_user_in_domain(
-        subject.namespaced_key, role.namespaced_key, scope.namespaced_key
+        subject.normalized_key, role.normalized_key, scope.normalized_key
     )
 
 
@@ -283,7 +283,7 @@ def get_subject_role_assignments(subject: SubjectData) -> list[RoleAssignmentDat
     enforcer = AuthzEnforcer.get_enforcer()
     role_assignments = []
     for policy in enforcer.get_filtered_grouping_policy(
-        GroupingPolicyIndex.SUBJECT.value, subject.namespaced_key
+        GroupingPolicyIndex.SUBJECT.value, subject.normalized_key
     ):
         role = RoleData(namespaced_key=policy[GroupingPolicyIndex.ROLE.value])
         role.permissions = get_permissions_for_single_role(role)
@@ -315,7 +315,7 @@ def get_subject_role_assignments_in_scope(
     # TODO: we still need to get the remaining data for the role like email, etc
     role_assignments = []
     for namespaced_key in enforcer.get_roles_for_user_in_domain(
-        subject.namespaced_key, scope.namespaced_key
+        subject.normalized_key, scope.normalized_key
     ):
         role = RoleData(namespaced_key=namespaced_key)
         role_assignments.append(
@@ -348,7 +348,7 @@ def get_subject_role_assignments_for_role_in_scope(
     enforcer = AuthzEnforcer.get_enforcer()
     role_assignments = []
     for subject in enforcer.get_users_for_role_in_domain(
-        role.namespaced_key, scope.namespaced_key
+        role.normalized_key, scope.normalized_key
     ):
         if subject.startswith(f"{RoleData.NAMESPACE}{RoleData.SEPARATOR}"):
             # Skip roles that are also subjects
@@ -413,5 +413,5 @@ def get_subjects_for_role(role: RoleData) -> list[SubjectData]:
     """
     enforcer = AuthzEnforcer.get_enforcer()
     enforcer.load_policy()
-    policies = enforcer.get_filtered_grouping_policy(GroupingPolicyIndex.ROLE.value, role.namespaced_key)
+    policies = enforcer.get_filtered_grouping_policy(GroupingPolicyIndex.ROLE.value, role.normalized_key)
     return [SubjectData(namespaced_key=policy[GroupingPolicyIndex.SUBJECT.value]) for policy in policies]

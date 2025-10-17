@@ -112,6 +112,7 @@ class AuthZData(AuthzBaseClass):
 
     external_key: str = ""
     namespaced_key: str = ""
+    normalized_key: str = ""
 
     def __attrs_post_init__(self):
         """Post-initialization processing for attributes.
@@ -134,6 +135,8 @@ class AuthZData(AuthzBaseClass):
         # namespaced_key at this point.
         if not self.external_key:
             self.external_key = self.namespaced_key.split(self.SEPARATOR, 1)[1]
+
+        self.normalized_key = self.namespaced_key.lower()
 
 
 class ScopeMeta(type):

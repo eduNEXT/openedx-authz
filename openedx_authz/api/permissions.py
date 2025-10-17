@@ -44,7 +44,7 @@ def get_all_permissions_in_scope(scope: ScopeData) -> list[PermissionData]:
     """
     enforcer = AuthzEnforcer.get_enforcer()
     actions = enforcer.get_filtered_policy(
-        PolicyIndex.SCOPE.value, scope.namespaced_key
+        PolicyIndex.SCOPE.value, scope.normalized_key
     )
     return [get_permission_from_policy(action) for action in actions]
 
@@ -67,5 +67,5 @@ def is_subject_allowed(
     enforcer = AuthzEnforcer.get_enforcer()
     enforcer.load_policy()
     return enforcer.enforce(
-        subject.namespaced_key, action.namespaced_key, scope.namespaced_key
+        subject.normalized_key, action.normalized_key, scope.normalized_key
     )
