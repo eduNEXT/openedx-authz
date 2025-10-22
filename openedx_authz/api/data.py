@@ -383,16 +383,22 @@ class ContentLibraryData(ScopeData):
             return False
 
     def exists(self) -> bool:
-        """Check if the content library exists.
+        """Check if the content library exists with a valid, canonical key.
+
+        Validates that the library_id is a valid LibraryLocatorV2 key and that
+        a corresponding ContentLibrary object exists in the database. The method
+        also verifies that the canonical key from the database matches the
+        instance's key to ensure consistency in the Casbin policy store.
 
         Returns:
-            bool: True if the content library exists, False otherwise.
+            bool: True if the content library exists and has a valid canonical key,
+                  False if the key is invalid or the library does not exist.
         """
         try:
             library_key = LibraryLocatorV2.from_string(self.library_id)
             obj = ContentLibrary.objects.get_by_key(library_key=library_key)
             return obj.library_key == library_key
-        except ContentLibrary.DoesNotExist:
+        except (InvalidKeyError, ContentLibrary.DoesNotExist):
             return False
 
     def __str__(self):
