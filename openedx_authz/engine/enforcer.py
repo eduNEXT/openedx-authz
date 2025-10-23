@@ -22,6 +22,7 @@ from casbin_adapter.enforcer import initialize_enforcer
 from django.conf import settings
 
 from openedx_authz.engine.adapter import ExtendedAdapter
+from openedx_authz.engine.matcher import check_custom_conditions
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,7 @@ class AuthzEnforcer:
         auto_load_policy_interval = getattr(settings, "CASBIN_AUTO_LOAD_POLICY_INTERVAL", 0)
         if auto_load_policy_interval > 0:
             enforcer.start_auto_load_policy(auto_load_policy_interval)
+            enforcer.add_function("custom_check", check_custom_conditions)
             enforcer.enable_auto_save(True)
         else:
             # Disable auto-save to prevent unnecessary database writes
