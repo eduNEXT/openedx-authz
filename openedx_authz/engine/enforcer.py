@@ -94,6 +94,7 @@ class AuthzEnforcer:
 
         adapter = ExtendedAdapter()
         enforcer = SyncedEnforcer(settings.CASBIN_MODEL, adapter)
+        enforcer.load_policy()
         auto_load_policy_interval = getattr(settings, "CASBIN_AUTO_LOAD_POLICY_INTERVAL", 0)
         if auto_load_policy_interval > 0:
             enforcer.start_auto_load_policy(auto_load_policy_interval)
