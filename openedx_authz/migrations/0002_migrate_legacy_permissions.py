@@ -4,7 +4,7 @@ import logging
 
 from django.db import migrations
 
-from openedx_authz.api.users import assign_role_to_user_in_scope
+from openedx_authz.api.users import assign_role_to_user_in_scope, batch_assign_role_to_users_in_scope
 from openedx_authz.constants.roles import LIBRARY_ADMIN, LIBRARY_AUTHOR, LIBRARY_USER
 
 logger = logging.getLogger(__name__)
@@ -43,16 +43,10 @@ def migrate_legacy_permissions(apps, schema_editor):
         return
 
     legacy_permissions = ContentLibraryPermission.objects.select_related(
-        'library', 'library__org', 'user'
+        'library', 'library__org', 'user', 'group'
     ).all()
 
     for permission in legacy_permissions:
-        if permission.group:
-            # TODO: Consider creating individual role assignments for each user in the group
-            logger.warning(
-                f"Skipping group-based permission for Group: {permission.group}")
-            continue
-
         # Migrate the permission to the new model
 
         # Derive equivalent role based on access level
@@ -73,16 +67,28 @@ def migrate_legacy_permissions(apps, schema_editor):
         # Generating scope based on library identifier
         scope = f"lib:{permission.library.org.name}:{permission.library.slug}"
 
-        logger.info(
-            f"Migrating permission for User: {permission.user.username} to Role: {role.external_key} in Scope: {scope}"
-        )
+        if permission.group:
+            # Permission applied to a group
+            users = [user.username for user in permission.group.user_set.all()]
+            logger.info(
+                f"Migrating permissions for Users: {users} in Group: {permission.group.name} to Role: {role.external_key} in Scope: {scope}"
+            )
+            batch_assign_role_to_users_in_scope(
+                users=users,
+                role_external_key=role.external_key,
+                scope_external_key=scope
+            )
+        else:
+            # Permission applied to individual user
+            logger.info(
+                f"Migrating permission for User: {permission.user.username} to Role: {role.external_key} in Scope: {scope}"
+            )
 
-        # TODO: not sure if this can/should be done in an atomic transaction
-        assign_role_to_user_in_scope(
-            user_external_key=permission.user.username,
-            role_external_key=role.external_key,
-            scope_external_key=scope
-        )
+            assign_role_to_user_in_scope(
+                user_external_key=permission.user.username,
+                role_external_key=role.external_key,
+                scope_external_key=scope
+            )
 
 
 class Migration(migrations.Migration):
