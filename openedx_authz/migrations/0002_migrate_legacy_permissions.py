@@ -3,8 +3,9 @@
 import logging
 
 from django.db import migrations
-from openedx_authz.constants.roles import LIBRARY_ADMIN, LIBRARY_AUTHOR, LIBRARY_USER
+
 from openedx_authz.api.users import assign_role_to_user_in_scope
+from openedx_authz.constants.roles import LIBRARY_ADMIN, LIBRARY_AUTHOR, LIBRARY_USER
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,8 @@ def migrate_legacy_permissions(apps, schema_editor):
     - user: subject
     - access_level: role
 
-    Now, we don't have an equivalent concept to "Group", for this we will go through the users in the group and assign roles independently.
+    Now, we don't have an equivalent concept to "Group", for this we will go through the users in the group and assign
+    roles independently.
     """
     # ContentLibraryPermission model from the content_libraries app, here is where the legacy permissions are stored
     try:
