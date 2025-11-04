@@ -71,7 +71,8 @@ def migrate_legacy_permissions(apps, schema_editor):
             # Permission applied to a group
             users = [user.username for user in permission.group.user_set.all()]
             logger.info(
-                f"Migrating permissions for Users: {users} in Group: {permission.group.name} to Role: {role.external_key} in Scope: {scope}"
+                f"Migrating permissions for Users: {users} in Group: {permission.group.name} "
+                f"to Role: {role.external_key} in Scope: {scope}"
             )
             batch_assign_role_to_users_in_scope(
                 users=users,
@@ -81,7 +82,8 @@ def migrate_legacy_permissions(apps, schema_editor):
         else:
             # Permission applied to individual user
             logger.info(
-                f"Migrating permission for User: {permission.user.username} to Role: {role.external_key} in Scope: {scope}"
+                f"Migrating permission for User: {permission.user.username} "
+                f"to Role: {role.external_key} in Scope: {scope}"
             )
 
             assign_role_to_user_in_scope(
@@ -92,6 +94,10 @@ def migrate_legacy_permissions(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    """
+    Migration to transfer legacy permissions from ContentLibraryPermission
+    to the new Casbin-based authorization model.
+    """
 
     dependencies = [
         ('openedx_authz', '0001_add_casbin_dependency'),
