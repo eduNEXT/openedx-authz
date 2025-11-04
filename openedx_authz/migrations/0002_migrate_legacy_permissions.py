@@ -58,8 +58,8 @@ def migrate_legacy_permissions(apps, schema_editor):
         elif permission.access_level == 'read':
             role = LIBRARY_USER
         else:
-            # This should not happen, log and skip
-            # TODO: Should we fail here instead?
+            # This should not happen as there are no more access_levels defined
+            # in ContentLibraryPermission, log and skip
             logger.warning(
                 f"Unknown access level: {permission.access_level} for User: {permission.user}")
             continue
