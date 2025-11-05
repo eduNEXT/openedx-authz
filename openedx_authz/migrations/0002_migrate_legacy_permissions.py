@@ -10,6 +10,25 @@ from openedx_authz.constants.roles import LIBRARY_ADMIN, LIBRARY_AUTHOR, LIBRARY
 logger = logging.getLogger(__name__)
 
 
+def _log_migration_errors(permissions_with_errors: list) -> None:
+    """
+    Log the permissions that could not be migrated during the migration process.
+    Args:
+        permissions_with_errors (list): List of ContentLibraryPermission instances that failed to migrate.
+    """
+    logger.error(
+        f"Migration completed with errors for {len(permissions_with_errors)} permissions.\n"
+        "The following permissions could not be migrated:"
+    )
+    for permission in permissions_with_errors:
+        logger.error(
+            "Access level: %s, %sLibrary: %s",
+            permission.access_level,
+            f"User: {permission.user.username}, " if permission.user else f"Group: {permission.group.name}, ",
+            permission.library.slug
+        )
+
+
 def migrate_legacy_permissions(apps, schema_editor):
     """
     Migrate legacy permission data to the new Casbin-based authorization model.
@@ -46,22 +65,27 @@ def migrate_legacy_permissions(apps, schema_editor):
         'library', 'library__org', 'user', 'group'
     ).all()
 
+    # List to keep track of any permissions that could not be migrated
+    permissions_with_errors = []
+
     for permission in legacy_permissions:
         # Migrate the permission to the new model
 
         # Derive equivalent role based on access level
-        role = LIBRARY_USER
-        if permission.access_level == 'admin':
-            role = LIBRARY_ADMIN
-        elif permission.access_level == 'author':
-            role = LIBRARY_AUTHOR
-        elif permission.access_level == 'read':
-            role = LIBRARY_USER
-        else:
+        access_level_to_role = {
+            'admin': LIBRARY_ADMIN,
+            'author': LIBRARY_AUTHOR,
+            'read': LIBRARY_USER,
+        }
+
+        role = access_level_to_role.get(permission.access_level)
+        if role is None:
             # This should not happen as there are no more access_levels defined
             # in ContentLibraryPermission, log and skip
-            logger.warning(
-                f"Unknown access level: {permission.access_level} for User: {permission.user}")
+            logger.error(
+                f"Unknown access level: {permission.access_level} for User: {permission.user}"
+            )
+            permissions_with_errors.append(permission)
             continue
 
         # Generating scope based on library identifier
@@ -91,6 +115,9 @@ def migrate_legacy_permissions(apps, schema_editor):
                 role_external_key=role.external_key,
                 scope_external_key=scope
             )
+
+    if permissions_with_errors:
+        _log_migration_errors(permissions_with_errors)
 
 
 class Migration(migrations.Migration):
