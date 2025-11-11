@@ -127,7 +127,7 @@ class Migration(migrations.Migration):
     """
 
     dependencies = [
-        ('openedx_authz', '0001_add_casbin_dependency'),
+        ('openedx_authz', '0004_contentlibraryscope'),
     ]
 
     operations = [
