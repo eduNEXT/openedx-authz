@@ -248,6 +248,10 @@ class AuthzEnforcer:
         # Avoid circular import
         from openedx_authz.engine.matcher import is_admin_or_superuser_check  # pylint: disable=import-outside-toplevel
 
+        # Silence verbose casbin policy logging BEFORE creating the enforcer
+        # to prevent print_policy() from showing during initialization
+        logging.getLogger("casbin.policy").setLevel(logging.WARNING)
+
         db_alias = getattr(settings, "CASBIN_DB_ALIAS", "default")
 
         try:
