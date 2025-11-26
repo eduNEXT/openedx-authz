@@ -151,8 +151,6 @@ class AuthzEnforcer:
 
         if auto_load_policy_interval > 0:
             cls.configure_enforcer_auto_loading(auto_load_policy_interval)
-        else:
-            logger.warning("CASBIN_AUTO_LOAD_POLICY_INTERVAL is not set or zero; auto-load is disabled.")
 
         cls.configure_enforcer_auto_save(auto_save_policy)
 
@@ -248,9 +246,10 @@ class AuthzEnforcer:
         # Avoid circular import
         from openedx_authz.engine.matcher import is_admin_or_superuser_check  # pylint: disable=import-outside-toplevel
 
-        # Silence verbose casbin policy logging BEFORE creating the enforcer
-        # to prevent print_policy() from showing during initialization
+        # Configure logging BEFORE initialize_enforcer() because it creates a ProxyEnforcer
+        # that doesn't pass logging config and would use Casbin's defaults
         logging.getLogger("casbin.policy").setLevel(logging.WARNING)
+        logging.getLogger("casbin.role").setLevel(logging.WARNING)
 
         db_alias = getattr(settings, "CASBIN_DB_ALIAS", "default")
 
