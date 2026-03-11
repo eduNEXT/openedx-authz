@@ -199,6 +199,9 @@ def assign_role_to_subject_in_scope(subject: SubjectData, role: RoleData, scope:
 
     Returns:
         bool: True if the role was assigned successfully, False otherwise.
+
+    Raises:
+        ValueError: If the scope string contains invalid glob patterns.
     """
     enforcer = AuthzEnforcer.get_enforcer()
     adapter = AuthzEnforcer.get_adapter()

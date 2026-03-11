@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from openedx_authz import api
+from openedx_authz.api.data import GLOBAL_SCOPE_WILDCARD
 from openedx_authz.rest_api.data import SortField, SortOrder
 from openedx_authz.rest_api.utils import get_generic_scope
 from openedx_authz.rest_api.v1.fields import CommaSeparatedListField, LowercaseCharField
@@ -46,9 +47,10 @@ class RoleScopeValidationMixin(serializers.Serializer):  # pylint: disable=abstr
         """Validate that the specified role and scope are valid and that the role exists in the scope.
 
         This method performs the following validations:
-        1. Validates that the scope is registered in the scope registry
-        2. Validates that the scope exists in the system
-        3. Validates that the role is defined into the roles assigned to the scope
+        1. Validates that glob patterns in scope follow security rules
+        2. Validates that the scope is registered in the scope registry
+        3. Validates that the scope exists in the system (if not using glob)
+        4. Validates that the role is defined into the roles assigned to the scope
 
         Args:
             attrs: Dictionary containing 'role' and 'scope' keys with their string values.
