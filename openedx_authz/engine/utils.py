@@ -8,10 +8,11 @@ import logging
 from collections import defaultdict
 
 from casbin import Enforcer
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from opaque_keys.edx.django.models import CourseKeyField
 
-from openedx_authz.api.data import CourseOverviewData, OrgCourseOverviewGlobData
+from openedx_authz.api.data import CourseOverviewData, OrgCourseOverviewGlobData, RoleAssignmentData
 from openedx_authz.api.roles import get_all_role_assignments_per_scope_type
 from openedx_authz.api.users import (
     assign_role_to_user_in_scope,
@@ -24,6 +25,7 @@ from openedx_authz.constants.roles import (
     LIBRARY_AUTHOR,
     LIBRARY_USER,
 )
+from openedx_authz.models.migrations import AuthzCourseAuthoringMigrationRun, MigrationType, ScopeType
 
 logger = logging.getLogger(__name__)
 
@@ -294,7 +296,7 @@ def migrate_legacy_course_roles_to_authz(course_access_role_model, course_id_lis
 
 def migrate_authz_to_legacy_course_roles(
     course_access_role_model, user_subject_model, course_id_list, org_id, delete_after_migration
-):
+) -> tuple[list[RoleAssignmentData], list[RoleAssignmentData]]:
     """
     Migrate permissions from the new Casbin-based authorization model back to the legacy CourseAccessRole model.
     This function reads permissions from the Casbin enforcer and creates equivalent entries in the
@@ -320,10 +322,7 @@ def migrate_authz_to_legacy_course_roles(
     _validate_migration_input(course_id_list, org_id)
 
     role_assignments = get_all_role_assignments_per_scope_type(
-        scope_types=(
-            CourseOverviewData,
-            OrgCourseOverviewGlobData,
-        )
+        scope_types=(CourseOverviewData, OrgCourseOverviewGlobData)
     )
 
     # Two cases here:
@@ -406,7 +405,7 @@ def migrate_authz_to_legacy_course_roles(
         logger.info(f"Total of {total_unassignments} role assignments unassigned after successful rollback migration.")
         for (role_external_key, scope), users in unassignments.items():
             logger.info(
-                f"Unassigned Role: {role_external_key} from {len(users)} users \n"
+                f"Unassigned Role: {role_external_key} from {len(users)} users "
                 f"in Scope: {scope} after successful rollback migration."
             )
             batch_unassign_role_from_users(
@@ -416,3 +415,96 @@ def migrate_authz_to_legacy_course_roles(
             )
 
     return roles_with_errors, roles_with_no_errors
+
+
+def run_course_authoring_migration(
+    migration_type: MigrationType,
+    scope_type: ScopeType,
+    scope_key: str,
+    course_access_role_model,
+    user_subject_model=None,
+    course_id_list=None,
+    org_id=None,
+    delete_after_migration=True,
+) -> None:
+    """Run a course authoring migration with full tracking and concurrency guard.
+
+    TODO: Add better documentation.
+
+    Args:
+        migration_type (MigrationType): Direction of the migration
+            (``FORWARD`` = legacy → authz, ``ROLLBACK`` = authz → legacy).
+        scope_type (ScopeType): Whether the scope is a single course or an org.
+        scope_key (str): Course ID string or org name used as the tracking key.
+        course_access_role_model: The ``CourseAccessRole`` model class (passed
+            explicitly to avoid import issues inside Django migrations).
+        user_subject_model: The ``UserSubject`` model class. Required for
+            ``ROLLBACK`` migrations; ignored for ``FORWARD`` migrations.
+        course_id_list (list[str] | None): List of course-v1 keys to filter.
+        org_id (str | None): Organisation name to filter.
+        delete_after_migration (bool): Whether to delete/unassign successfully
+            migrated entries from the source system after migration.
+    """
+    try:
+        with transaction.atomic():
+            run = AuthzCourseAuthoringMigrationRun.create_running(migration_type, scope_type, scope_key)
+    except IntegrityError:
+        logger.warning(
+            "Skipping %s migration for %s:%s — an active run already exists.", migration_type, scope_type, scope_key
+        )
+        AuthzCourseAuthoringMigrationRun.create_skipped(migration_type, scope_type, scope_key)
+        return
+
+    logger.info("Started %s migration run [%s] for %s:%s", migration_type, run.id, scope_type, scope_key)
+
+    try:
+        with transaction.atomic():
+            if migration_type == MigrationType.FORWARD:
+                errors, successes = migrate_legacy_course_roles_to_authz(
+                    course_access_role_model, course_id_list, org_id, delete_after_migration
+                )
+            else:
+                errors, successes = migrate_authz_to_legacy_course_roles(
+                    course_access_role_model, user_subject_model, course_id_list, org_id, delete_after_migration
+                )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        # The inner atomic block is rolled back on exception; mark_failed() runs
+        # outside it so the tracking record is always persisted.
+        logger.exception(
+            "Unexpected error in migration run [%s] for %s:%s", run.id, scope_type, scope_key, exc_info=exc
+        )
+        run.mark_failed(exception=exc)
+        return
+
+    metadata_updates = {"successes": len(successes), "errors": len(errors)}
+
+    # TODO: Add details of each error in the metadata.
+    if errors:
+        error_metadata = {}
+        for idx, error in enumerate(errors):
+            error_metadata[f"error_{idx}"] = {
+                "subject": error.subject.external_key,
+                "role": error.roles[0].external_key,
+                "scope": error.scope.external_key,
+            }
+        metadata_updates["errors"] = error_metadata
+        run.mark_partial_success(metadata_updates=metadata_updates)
+        logger.warning(
+            "Partial success in %s migration run [%s] for %s:%s — successes=%d, errors=%d",
+            migration_type,
+            run.id,
+            scope_type,
+            scope_key,
+            len(successes),
+            len(errors),
+        )
+    else:
+        run.mark_completed(metadata_updates=metadata_updates)
+        logger.info(
+            "Completed %s migration run [%s] for %s:%s — successes=%d",
+            migration_type,
+            run.id,
+            scope_type,
+            scope_key,
+            len(successes),
+        )
