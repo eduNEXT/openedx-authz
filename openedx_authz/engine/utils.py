@@ -7,6 +7,8 @@ for the Open edX AuthZ system using Casbin.
 import logging
 from collections import defaultdict
 
+from django.db.models import Q
+
 from casbin import Enforcer
 from django.db.models import Q
 from opaque_keys.edx.django.models import CourseKeyField
