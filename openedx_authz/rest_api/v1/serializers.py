@@ -14,7 +14,7 @@ from openedx_authz.rest_api.data import (
     SortOrder,
     UserAssignmentSortField,
 )
-from openedx_authz.rest_api.utils import get_generic_scope
+from openedx_authz.rest_api.utils import get_generic_scope, get_user_full_name
 from openedx_authz.rest_api.v1.fields import (
     CaseSensitiveCommaSeparatedListField,
     CommaSeparatedListField,
@@ -276,7 +276,7 @@ class UserRoleAssignmentSerializer(serializers.Serializer):  # pylint: disable=a
     def get_full_name(self, obj) -> str:
         """Get the full name for the given role assignment."""
         user = self._get_user(obj)
-        return getattr(user.profile, "name", "") if user and hasattr(user, "profile") else ""
+        return get_user_full_name(user)
 
     def get_email(self, obj) -> str:
         """Get the email for the given role assignment."""
@@ -329,7 +329,7 @@ class TeamMemberSerializer(serializers.Serializer):  # pylint: disable=abstract-
 
     def get_full_name(self, obj: UserAssignments) -> str:
         """Get the full name for the given role assignment."""
-        return obj.user.get_full_name() if obj.user else ""
+        return get_user_full_name(obj.user)
 
     def get_email(self, obj: UserAssignments) -> str:
         """Get the email for the given role assignment."""
@@ -443,7 +443,7 @@ class TeamMemberUserAssignmentSerializer(TeamMemberAssignmentSerializer):  # pyl
 
     def get_full_name(self, obj: api.UserAssignmentData | api.SuperAdminAssignmentData) -> str:
         """Get user full name."""
-        return obj.user.get_full_name() if obj.user else ""
+        return get_user_full_name(obj.user)
 
     def get_username(self, obj: api.UserAssignmentData | api.SuperAdminAssignmentData) -> str:
         """Get username."""

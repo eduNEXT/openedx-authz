@@ -1,5 +1,7 @@
 """Utility functions for the Open edX AuthZ REST API."""
 
+from django.contrib.auth import get_user_model
+
 from openedx_authz.api.data import (
     GLOBAL_SCOPE_WILDCARD,
     ScopeData,
@@ -12,6 +14,48 @@ from openedx_authz.rest_api.data import (
     SortOrder,
     UserAssignmentSortField,
 )
+
+User = get_user_model()
+
+
+def get_user_full_name(user: User | None) -> str:
+    """
+    Get the full name of a user, with fallback strategies.
+
+    This function tries multiple strategies to get the user's full name:
+    1. Get name from Open edX user profile (user.profile.name)
+    2. Fall back to Django's get_full_name() method (first_name + last_name)
+    3. Return empty string if user is None or no name is available
+
+    Args:
+        user (User | None): The user object to get the full name from.
+
+    Returns:
+        str: The user's full name, or an empty string if not available.
+
+    Examples:
+        >>> user = User.objects.get(username='john_doe')
+        >>> get_user_full_name(user)
+        'John Doe'
+
+        >>> get_user_full_name(None)
+        ''
+    """
+    if not user:
+        return ""
+
+    # Try to get name from Open edX profile (most accurate)
+    if hasattr(user, "profile"):
+        profile_name = getattr(user.profile, "name", "").strip()
+        if profile_name:
+            return profile_name
+
+    # Fall back to Django's get_full_name() (first_name + last_name)
+    django_full_name = user.get_full_name().strip()
+    if django_full_name:
+        return django_full_name
+
+    return ""
 
 
 def get_generic_scope(scope: ScopeData) -> ScopeData:
