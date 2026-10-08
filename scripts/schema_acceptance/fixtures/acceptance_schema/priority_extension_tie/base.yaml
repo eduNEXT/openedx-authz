@@ -1,0 +1,8 @@
+schema_version: "1.0"
+priority: 100
+permission_categories:
+  - {id: acceptance_category, display_name: Acceptance, description: Base category.}
+permissions:
+  - {namespace: acceptance, name: view, display_name: View, description: View., category_id: acceptance_category, scopes: [course-v1]}
+roles:
+  - {id: acceptance_editor, display_name: Acceptance editor, description: Base role., scopes: [course-v1], permissions: [acceptance.view]}

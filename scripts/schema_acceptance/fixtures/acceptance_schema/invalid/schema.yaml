@@ -1,0 +1,12 @@
+schema_version: "1.0"
+priority: 900
+permission_categories:
+  - id: acceptance_category
+    display_name: Acceptance
+    description: Disposable acceptance-test definitions.
+roles:
+  - id: acceptance_editor
+    display_name: Acceptance editor
+    description: This role refers to a missing permission.
+    scopes: [course-v1]
+    permissions: [acceptance.missing]

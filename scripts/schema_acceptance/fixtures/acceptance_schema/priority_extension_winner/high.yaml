@@ -1,0 +1,4 @@
+schema_version: "1.0"
+priority: 300
+role_extensions:
+  - {role_id: acceptance_editor, display_name: High-priority editor, remove_permissions: [acceptance.edit]}

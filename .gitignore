@@ -63,6 +63,7 @@ docs/openedx_authz.*.rst
 # Persistent database files
 *.sqlite3
 *.db
+/.tutor-schema-acceptance/
 
 # IDE
 .vscode/

@@ -1,0 +1,4 @@
+schema_version: "99.0"
+priority: 100
+permission_categories:
+  - {id: acceptance_category, display_name: Acceptance, description: Unsupported schema version.}

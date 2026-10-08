@@ -1,8 +1,37 @@
-.PHONY: clean clean_tox compile_translations coverage diff_cover docs dummy_translations \
+.PHONY: acceptance acceptance-bootstrap acceptance-case acceptance-destroy acceptance-down acceptance-report \
+		acceptance-status acceptance-up clean clean_tox compile_translations coverage diff_cover docs dummy_translations \
         extract_translations fake_translations help pii_check pull_translations \
         quality requirements selfcheck test test-all upgrade validate install_transifex_client
 
 .DEFAULT_GOAL := help
+
+ACCEPTANCE_TUTOR_ROOT ?= $(CURDIR)/.tutor-schema-acceptance
+TUTOR ?= tutor
+ACCEPTANCE := scripts/schema_acceptance/run.sh
+
+acceptance-bootstrap: ## initialize the disposable Tutor dev environment (slow)
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) bootstrap
+
+acceptance-up: ## start the disposable Tutor dev environment
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) up
+
+acceptance-case: ## run one real schema case: make acceptance-case CASE=initial_apply
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) case "$(CASE)"
+
+acceptance: ## run all real schema acceptance cases
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) all
+
+acceptance-status: ## show the disposable Tutor environment status
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) status
+
+acceptance-report: ## create report.md for RUN=<result directory>, or the latest run
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) report "$(RUN)"
+
+acceptance-down: ## stop the disposable Tutor environment and preserve its data
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" $(ACCEPTANCE) down
+
+acceptance-destroy: ## delete the disposable environment: add CONFIRM_DESTROY=yes
+	TUTOR="$(TUTOR)" ACCEPTANCE_TUTOR_ROOT="$(ACCEPTANCE_TUTOR_ROOT)" CONFIRM_DESTROY="$(CONFIRM_DESTROY)" $(ACCEPTANCE) destroy
 
 # For opening files in a browser. Use like: $(BROWSER)relative/path/to/file.html
 BROWSER := python -m webbrowser file://$(CURDIR)/

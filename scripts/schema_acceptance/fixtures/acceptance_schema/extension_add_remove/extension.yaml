@@ -1,0 +1,7 @@
+schema_version: "1.0"
+priority: 200
+role_extensions:
+  - role_id: acceptance_editor
+    display_name: Extended acceptance editor
+    add_permissions: [acceptance.edit]
+    remove_permissions: [acceptance.view]
