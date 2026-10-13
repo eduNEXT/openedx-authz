@@ -1,0 +1,10 @@
+schema_version: "1.0"
+priority: 200
+
+roles:
+  - id: dup_across_priority
+    display_name: From a_high_priority.yaml (priority 200)
+    description: Defined in the higher-priority file, which sorts first.
+  - id: dup_same_text
+    display_name: Same text in both files
+    description: Same text in both files.

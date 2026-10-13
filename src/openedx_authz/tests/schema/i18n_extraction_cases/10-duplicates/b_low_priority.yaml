@@ -1,0 +1,33 @@
+schema_version: "1.0"
+priority: 100
+
+roles:
+  - id: dup_across_priority
+    display_name: From b_low_priority.yaml (priority 100)
+    description: Defined in the lower-priority file, which sorts last.
+  - id: dup_same_text
+    display_name: Same text in both files
+    description: Same text in both files.
+  - id: dup_in_file
+    display_name: First definition in the same file
+    description: First definition in the same file.
+  - id: dup_in_file
+    display_name: Second definition in the same file
+    description: Second definition in the same file.
+  - id: course_admin
+    display_name: Course Admin redefined by a test schema
+    description: Same id as a role in the real schema.
+
+permissions:
+  - namespace: test
+    name: dup_permission
+    display_name: First permission definition
+    description: First permission definition.
+  - namespace: test
+    name: dup_permission
+    display_name: Second permission definition
+    description: Second permission definition.
+
+role_extensions:
+  - role: dup_in_file
+    display_name: Extension sharing the role id

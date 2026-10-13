@@ -2,10 +2,10 @@
 import ast, sys, pathlib, polib
 
 for out in sorted(pathlib.Path(sys.argv[1]).iterdir()):
-    gen, po = out / "generated.py", out / "django.po"
+    gen, po = out / "generated_py.out", out / "django.po"
     print(f"\n=== {out.name} (exit {(out / 'exit_code').read_text().strip()})")
     if not gen.exists():
-        print("  no generated.py"); continue
+        print("  no generated module"); continue
     calls = [tuple(a.value for a in n.value.args) for n in ast.parse(gen.read_text()).body
              if isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)]
     if not po.exists():
