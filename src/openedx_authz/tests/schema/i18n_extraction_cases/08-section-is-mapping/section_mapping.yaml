@@ -1,0 +1,7 @@
+schema_version: "1.0"
+priority: 100
+
+roles:
+  role_a:
+    display_name: Role A
+    description: Section written as a mapping instead of a list.

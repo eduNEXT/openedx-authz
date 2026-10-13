@@ -1,0 +1,19 @@
+schema_version: "1.0"
+priority: 100
+
+roles:
+  - id: role_bool
+    display_name: Yes
+    description: no
+  - id: role_int
+    display_name: 123
+    description: 1.50
+  - id: role_null
+    display_name: ~
+    description: null
+  - id: role_date
+    display_name: 2026-10-13
+    description: Date coerced by YAML.
+  - id: role_list
+    display_name: [a, b]
+    description: {key: value}

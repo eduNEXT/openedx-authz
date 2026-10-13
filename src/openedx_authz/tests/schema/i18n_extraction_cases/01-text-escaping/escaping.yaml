@@ -1,0 +1,68 @@
+schema_version: "1.0"
+priority: 100
+
+permission_categories:
+  - id: cat_folded_strip
+    display_name: Folded strip
+    description: >-
+      Folded with strip chomping,
+      no trailing newline expected.
+  - id: cat_folded_keep
+    display_name: Folded keep
+    description: >
+      Folded with clip chomping,
+      one trailing newline expected.
+  - id: cat_literal
+    display_name: Literal block
+    description: |
+      Line one.
+      Line two.
+
+permissions:
+  - namespace: test
+    name: percent
+    display_name: Pass at 50%
+    description: Uses %s and %(name)s placeholders.
+    category: cat_literal
+  - namespace: test
+    name: braces
+    display_name: Hello {name}
+    description: Brace {0} and {{escaped}} text.
+    category: cat_literal
+  - namespace: test
+    name: quotes
+    display_name: It's "quoted"
+    description: 'Single '' and double " and a backslash \ here.'
+    category: cat_literal
+  - namespace: test
+    name: unicode
+    display_name: Gestión de cursos ✓ 🎓
+    description: مدير المكتبة
+    category: cat_literal
+  - namespace: test
+    name: whitespace
+    display_name: "  padded  "
+    description: "trailing space "
+    category: cat_literal
+  - namespace: test
+    name: same_text
+    display_name: Same text
+    description: Same text
+    category: cat_literal
+  - namespace: test
+    name: shared_a
+    display_name: View
+    description: Shared display name A.
+    category: cat_literal
+  - namespace: test
+    name: shared_b
+    display_name: View
+    description: Shared display name B.
+    category: cat_literal
+
+roles:
+  - id: long_role
+    display_name: Long description role
+    description: This description is intentionally longer than seventy-nine characters so xgettext wraps it across several lines in the po file, which must still round-trip exactly.
+    scopes: [course-v1]
+    permissions: [test.percent]

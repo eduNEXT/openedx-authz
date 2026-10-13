@@ -1,0 +1,10 @@
+schema_version: "1.0"
+priority: 100
+
+roles:
+  - id: role_tab
+    display_name: "Tab\there"
+    description: "Carriage\rreturn"
+  - id: role_eot
+    display_name: "Context\x04separator"
+    description: Contains gettext's msgctxt separator byte.

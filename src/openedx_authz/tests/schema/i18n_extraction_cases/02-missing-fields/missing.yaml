@@ -1,0 +1,22 @@
+schema_version: "1.0"
+priority: 100
+
+permission_categories:
+  - id: cat_no_description
+    display_name: Category without description
+
+permissions:
+  - name: no_namespace
+    display_name: Permission without namespace
+    description: Context should become ".no_namespace".
+  - namespace: test
+    display_name: Permission without name
+    description: Context should become "test.".
+
+roles:
+  - id: role_no_display_name
+    description: Role without display_name, emits an empty msgid.
+  - display_name: Role without id A
+    description: Collides with role without id B.
+  - display_name: Role without id B
+    description: Collides with role without id A.

@@ -1,0 +1,5 @@
+schema_version: "1.0"
+priority: 100
+
+roles:
+  - just_a_string

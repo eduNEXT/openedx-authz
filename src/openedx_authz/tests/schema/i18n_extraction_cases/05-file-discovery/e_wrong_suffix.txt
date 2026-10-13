@@ -1,0 +1,4 @@
+roles:
+  - id: ignored
+    display_name: Must not be extracted
+    description: Wrong suffix.

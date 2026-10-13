@@ -1,0 +1,7 @@
+schema_version: "1.0"
+priority: 100
+
+roles:
+  - id: duplicated_role
+    display_name: Duplicated role from a_first.yaml
+    description: Defined in a_first.yaml.
